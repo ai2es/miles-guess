@@ -1,0 +1,100 @@
+seed: 1000
+save_loc: "/glade/work/schreck/repos/evidential/main/results/production/surface_layer/gaussian_data"
+training_metric: "val_mae"
+direction: "min"
+
+ensemble:
+    n_models: 1
+    n_splits: 20
+    monte_carlo_passes: 50
+
+data:
+    save_loc: "/glade/p/cisl/aiml/ai2es/surfacelayer/cabauw_derived_data_20210720.csv"
+    input_cols: [
+        'wind_speed:10_m:m_s-1',
+        'potential_temperature_skin_change:10_m:K_m-1',
+        'bulk_richardson:10_m:None',
+        'mixing_ratio_skin_change:2_m:g_kg-1_m-1'
+    ]
+    output_cols: [
+        'friction_velocity:surface:m_s-1', 
+        'kinematic_sensible_heat_flux:surface:K_m_s-1', 
+        'kinematic_latent_heat_flux:surface:g_kg-1_m_s-1'
+    ]
+    splitter: "GroupShuffleSplit"
+    train_size: 0.9
+    scaler_x:
+        type: "quantile"
+        params:
+            copy: true
+            with_mean: true
+            with_std: true
+    scaler_y:
+        type: "normalize"
+        params:
+            copy: true
+            with_mean: true
+            with_std: true
+    split_col: "day"
+
+model:
+    activation: relu
+    batch_size: 283
+    dropout_alpha: 0.2
+    epochs: 200
+    hidden_layers: 4
+    hidden_neurons: 7907
+    kernel_reg: l2
+    l1_weight: 0.0
+    l2_weight: 1.3830591026605887e-06
+    lr: 0.0002440268028890707
+    metrics: mae
+    optimizer: adam
+    uncertainties: false
+    use_dropout: true
+    use_noise: false
+    verbose: 2
+    
+callbacks:
+  EarlyStopping:
+    monitor: "val_mae"
+    patience: 5
+    mode: "min"
+    verbose: 0
+  ReduceLROnPlateau: 
+    monitor: "val_mae"
+    factor: 0.1
+    patience: 2
+    min_lr: 1.0e-12
+    min_delta: 1.0e-08
+    mode: "min"
+    verbose: 0
+  CSVLogger:
+    filename: "training_log.csv"
+    separator: ","
+    append: False
+  ModelCheckpoint:
+    filepath: "model.h5"
+    monitor: "val_mae"
+    save_weights: True
+    save_best_only: True
+    mode: "min"
+    verbose: 0
+    
+pbs:
+  name: gauss-data
+  select: 1
+  ncpus: 8
+  ngpus: 1
+  mem: 128GB
+  walltime: 24:00:00
+  gpu_type: v100
+  account: NAML0001
+  queue: casper
+  env_setup: |
+    source ~/.bashrc 
+    module unload cuda cudnn 
+    conda activate evidential
+    CUDNN_PATH=$(dirname $(python -c "import nvidia.cudnn;print(nvidia.cudnn.__file__)"))
+    export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$CONDA_PREFIX/lib/:$CUDNN_PATH/lib
+    export XLA_FLAGS=--xla_gpu_cuda_data_dir=$CONDA_PREFIX

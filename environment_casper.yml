@@ -1,0 +1,38 @@
+name: evidential
+channels:
+  - conda-forge
+  - nvidia
+dependencies:
+  - python=3.10
+  - numpy=1.23.*
+  - cudatoolkit=11.8.0
+  - cuda-nvcc=11.8.*
+  - scipy
+  - matplotlib
+  - xarray
+  - netcdf4
+  - dask
+  - pandas
+  - pyyaml
+  - pytest
+  - distributed
+  - pip
+  - pyproj
+  - jupyter
+  - jupyterlab
+  - cartopy
+  - tqdm
+  - sphinx
+  - numba
+  - cython
+  - pip:
+    - nvidia-cudnn-cu11==8.6.0.163
+    - tensorflow==2.12.*
+    - pyarrow
+    - fastparquet
+    - imblearn
+    - echo-opt
+    - hagelslag
+    - git+https://github.com/NCAR/bridgescaler
+    - git+https://github.com/ai2es/ptype-physical.git@schreck
+    - .

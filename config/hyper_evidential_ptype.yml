@@ -1,0 +1,115 @@
+log: True
+save_path: "/glade/scratch/schreck/repos/evidential/results/ptype/weighted/evidential"
+
+pbs:
+  jobs: 10
+  bash: [
+      "source ~/.bashrc", 
+      "module unload cuda cudnn", 
+      "conda activate evidential", 
+      'CUDNN_PATH=$(dirname $(python -c "import nvidia.cudnn;print(nvidia.cudnn.__file__)"))', 
+      'export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$CONDA_PREFIX/lib/:$CUDNN_PATH/lib', 
+      'export XLA_FLAGS=--xla_gpu_cuda_data_dir=$CONDA_PREFIX'
+        ]
+  batch:
+    N: "mlp-ev"
+    l: ["select=1:ncpus=8:ngpus=1:mem=128GB", "walltime=12:00:00", "gpu_type=v100"]
+    A: "NAML0001"
+    q: "casper"
+    o: "out"
+    e: "out"
+    
+optuna:
+  study_name: "evidential"
+  storage: "echo.db"
+  storage_type: "sqlite"
+  objective: "/glade/work/schreck/repos/evidential/main/applications/train_classifier_ptype.py"
+  metric: "val_ave_acc"
+  direction: "maximize"
+  n_trials: 1000
+  gpu: True
+  sampler:
+    type: "TPESampler"
+    n_startup_trials: 150 
+  parameters:
+    model:hidden_layers:
+      type: "int"
+      settings:
+        name: "hidden_layers"
+        low: 1
+        high: 5
+    model:hidden_neurons:
+      type: "int"
+      settings:
+        name: "hidden_neurons"
+        low: 50
+        high: 10000
+    model:annealing_coeff:
+      type: "float"
+      settings:
+        name: "annealing_coeff"
+        low: 1.0
+        high: 100.0
+    model:dropout_alpha:
+      type: "float"
+      settings:
+        name: "dropout_alpha"
+        low: 0.0
+        high: 0.5
+    model:lr:
+      type: "loguniform"
+      settings:
+        name: "lr"
+        low: 0.0000001
+        high: 0.01
+    model:activation:
+      type: "categorical"
+      settings:
+        name: "activation"
+        choices: ["relu", "leaky", "elu", "selu"]
+    model:batch_size:
+      type: "int"
+      settings:
+        name: "batch_size"
+        low: 64
+        high: 50000
+    # model:l2_weight:
+    #   type: "loguniform"
+    #   settings:
+    #     name: "l2_weight"
+    #     low: 0.0000000001
+    #     high: 0.01
+    qc:
+      type: "categorical"
+      settings:
+        name: "qc"
+        choices: ["3.0", "4.0", "5.0", "6.0", "7.0", "8.0", "9.0", "10.0"]
+    scaler_type:
+      type: "categorical"
+      settings:
+        name: "scaler_type"
+        choices: ["standard", "robust",  "normalize", "symmetric", "quantile", "quantile-uniform"]
+    rain_weight:
+      type: "float"
+      settings:
+        name: "rain_weight"
+        low: 0.001
+        high: 100
+    snow_weight:
+      type: "float"
+      settings:
+        name: "snow_weight"
+        low: 0.001
+        high: 100
+    sleet_weight:
+      type: "float"
+      settings:
+        name: "sleet_weight"
+        low: 0.001
+        high: 1000
+    frz_rain_weight:
+      type: "float"
+      settings:
+        name: "frz_rain_weight"
+        low: 0.001
+        high: 1000

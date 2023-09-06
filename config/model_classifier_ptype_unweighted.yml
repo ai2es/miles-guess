@@ -1,0 +1,386 @@
+seed: 1000
+verbose: 0
+save_loc: "/glade/p/cisl/aiml/ai2es/winter_ptypes/models/classifier_unweighted"
+asos_path: '/glade/p/cisl/aiml/ai2es/winter_ptypes/precip_rap/ASOS_mixture/'
+mping_path: '/glade/p/cisl/aiml/ai2es/winter_ptypes/precip_rap/mPING_mixture/'
+data_path: '/glade/p/cisl/aiml/ai2es/winter_ptypes/ptype_qc/mPING_interpolated_QC2.parquet'
+train_size1: 0.9 # When used with cutoff 2020-07-01 gives about 60/40 train/test split
+train_size2: 0.0
+qc: 3.0 # 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0
+test_cutoff: "2020-07-01"
+ptypes: ['ra_percent', 'sn_percent', 'pl_percent', 'fzra_percent']
+metric: "val_ave_acc"
+direction: "max"
+
+ensemble:
+    n_splits: 20
+    mc_steps: 100
+
+model:
+    activation: leaky
+    balanced_classes: 0
+    batch_size: 3097
+    dropout_alpha: 0.31256692323263807
+    epochs: 200
+    hidden_layers: 3
+    hidden_neurons: 200
+    loss: categorical_crossentropy
+    lr: 0.0004035503144482269
+    optimizer: adam
+    output_activation: softmax
+    use_dropout: 1
+    verbose: 0
+    
+scaler_type: "standard" # standard, robust, minmax, quantile, quantile-uniform
+scale_groups: ["TEMP_C", "T_DEWPOINT_C", "UGRD_m/s", "VGRD_m/s"]
+TEMP_C: [
+    'TEMP_C_0_m',
+    'TEMP_C_250_m',
+    'TEMP_C_500_m',
+    'TEMP_C_750_m',
+    'TEMP_C_1000_m',
+    'TEMP_C_1250_m',
+    'TEMP_C_1500_m',
+    'TEMP_C_1750_m',
+    'TEMP_C_2000_m',
+    'TEMP_C_2250_m',
+    'TEMP_C_2500_m',
+    'TEMP_C_2750_m',
+    'TEMP_C_3000_m',
+    'TEMP_C_3250_m',
+    'TEMP_C_3500_m',
+    'TEMP_C_3750_m',
+    'TEMP_C_4000_m',
+    'TEMP_C_4250_m',
+    'TEMP_C_4500_m',
+    'TEMP_C_4750_m',
+    'TEMP_C_5000_m',
+    # 'TEMP_C_5250_m',
+    # 'TEMP_C_5500_m',
+    # 'TEMP_C_5750_m',
+    # 'TEMP_C_6000_m',
+    # 'TEMP_C_6250_m',
+    # 'TEMP_C_6500_m',
+    # 'TEMP_C_6750_m',
+    # 'TEMP_C_7000_m',
+    # 'TEMP_C_7250_m',
+    # 'TEMP_C_7500_m',
+    # 'TEMP_C_7750_m',
+    # 'TEMP_C_8000_m',
+    # 'TEMP_C_8250_m',
+    # 'TEMP_C_8500_m',
+    # 'TEMP_C_8750_m',
+    # 'TEMP_C_9000_m',
+    # 'TEMP_C_9250_m',
+    # 'TEMP_C_9500_m',
+    # 'TEMP_C_9750_m',
+    # 'TEMP_C_10000_m',
+    # 'TEMP_C_10250_m',
+    # 'TEMP_C_10500_m',
+    # 'TEMP_C_10750_m',
+    # 'TEMP_C_11000_m',
+    # 'TEMP_C_11250_m',
+    # 'TEMP_C_11500_m',
+    # 'TEMP_C_11750_m',
+    # 'TEMP_C_12000_m',
+    # 'TEMP_C_12250_m',
+    # 'TEMP_C_12500_m',
+    # 'TEMP_C_12750_m',
+    # 'TEMP_C_13000_m',
+    # 'TEMP_C_13250_m',
+    # 'TEMP_C_13500_m',
+    # 'TEMP_C_13750_m',
+    # 'TEMP_C_14000_m',
+    # 'TEMP_C_14250_m',
+    # 'TEMP_C_14500_m',
+    # 'TEMP_C_14750_m',
+    # 'TEMP_C_15000_m',
+    # 'TEMP_C_15250_m',
+    # 'TEMP_C_15500_m',
+    # 'TEMP_C_15750_m',
+    # 'TEMP_C_16000_m',
+    # 'TEMP_C_16250_m',
+    # 'TEMP_C_16500_m'
+]
+
+T_DEWPOINT_C: [ 
+    'T_DEWPOINT_C_0_m',
+    'T_DEWPOINT_C_250_m',
+    'T_DEWPOINT_C_500_m',
+    'T_DEWPOINT_C_750_m',
+    'T_DEWPOINT_C_1000_m',
+    'T_DEWPOINT_C_1250_m',
+    'T_DEWPOINT_C_1500_m',
+    'T_DEWPOINT_C_1750_m',
+    'T_DEWPOINT_C_2000_m',
+    'T_DEWPOINT_C_2250_m',
+    'T_DEWPOINT_C_2500_m',
+    'T_DEWPOINT_C_2750_m',
+    'T_DEWPOINT_C_3000_m',
+    'T_DEWPOINT_C_3250_m',
+    'T_DEWPOINT_C_3500_m',
+    'T_DEWPOINT_C_3750_m',
+    'T_DEWPOINT_C_4000_m',
+    'T_DEWPOINT_C_4250_m',
+    'T_DEWPOINT_C_4500_m',
+    'T_DEWPOINT_C_4750_m',
+    'T_DEWPOINT_C_5000_m',
+    # 'T_DEWPOINT_C_5250_m',
+    # 'T_DEWPOINT_C_5500_m',
+    # 'T_DEWPOINT_C_5750_m',
+    # 'T_DEWPOINT_C_6000_m',
+    # 'T_DEWPOINT_C_6250_m',
+    # 'T_DEWPOINT_C_6500_m',
+    # 'T_DEWPOINT_C_6750_m',
+    # 'T_DEWPOINT_C_7000_m',
+    # 'T_DEWPOINT_C_7250_m',
+    # 'T_DEWPOINT_C_7500_m',
+    # 'T_DEWPOINT_C_7750_m',
+    # 'T_DEWPOINT_C_8000_m',
+    # 'T_DEWPOINT_C_8250_m',
+    # 'T_DEWPOINT_C_8500_m',
+    # 'T_DEWPOINT_C_8750_m',
+    # 'T_DEWPOINT_C_9000_m',
+    # 'T_DEWPOINT_C_9250_m',
+    # 'T_DEWPOINT_C_9500_m',
+    # 'T_DEWPOINT_C_9750_m',
+    # 'T_DEWPOINT_C_10000_m',
+    # 'T_DEWPOINT_C_10250_m',
+    # 'T_DEWPOINT_C_10500_m',
+    # 'T_DEWPOINT_C_10750_m',
+    # 'T_DEWPOINT_C_11000_m',
+    # 'T_DEWPOINT_C_11250_m',
+    # 'T_DEWPOINT_C_11500_m',
+    # 'T_DEWPOINT_C_11750_m',
+    # 'T_DEWPOINT_C_12000_m',
+    # 'T_DEWPOINT_C_12250_m',
+    # 'T_DEWPOINT_C_12500_m',
+    # 'T_DEWPOINT_C_12750_m',
+    # 'T_DEWPOINT_C_13000_m',
+    # 'T_DEWPOINT_C_13250_m',
+    # 'T_DEWPOINT_C_13500_m',
+    # 'T_DEWPOINT_C_13750_m',
+    # 'T_DEWPOINT_C_14000_m',
+    # 'T_DEWPOINT_C_14250_m',
+    # 'T_DEWPOINT_C_14500_m',
+    # 'T_DEWPOINT_C_14750_m',
+    # 'T_DEWPOINT_C_15000_m',
+    # 'T_DEWPOINT_C_15250_m',
+    # 'T_DEWPOINT_C_15500_m',
+    # 'T_DEWPOINT_C_15750_m',
+    # 'T_DEWPOINT_C_16000_m',
+    # 'T_DEWPOINT_C_16250_m',
+    # 'T_DEWPOINT_C_16500_m'
+]
+
+UGRD_m/s: [ 
+    'UGRD_m/s_0_m',
+    'UGRD_m/s_250_m',
+    'UGRD_m/s_500_m',
+    'UGRD_m/s_750_m',
+    'UGRD_m/s_1000_m',
+    'UGRD_m/s_1250_m',
+    'UGRD_m/s_1500_m',
+    'UGRD_m/s_1750_m',
+    'UGRD_m/s_2000_m',
+    'UGRD_m/s_2250_m',
+    'UGRD_m/s_2500_m',
+    'UGRD_m/s_2750_m',
+    'UGRD_m/s_3000_m',
+    'UGRD_m/s_3250_m',
+    'UGRD_m/s_3500_m',
+    'UGRD_m/s_3750_m',
+    'UGRD_m/s_4000_m',
+    'UGRD_m/s_4250_m',
+    'UGRD_m/s_4500_m',
+    'UGRD_m/s_4750_m',
+    'UGRD_m/s_5000_m',
+    # 'UGRD_m/s_5250_m',
+    # 'UGRD_m/s_5500_m',
+    # 'UGRD_m/s_5750_m',
+    # 'UGRD_m/s_6000_m',
+    # 'UGRD_m/s_6250_m',
+    # 'UGRD_m/s_6500_m',
+    # 'UGRD_m/s_6750_m',
+    # 'UGRD_m/s_7000_m',
+    # 'UGRD_m/s_7250_m',
+    # 'UGRD_m/s_7500_m',
+    # 'UGRD_m/s_7750_m',
+    # 'UGRD_m/s_8000_m',
+    # 'UGRD_m/s_8250_m',
+    # 'UGRD_m/s_8500_m',
+    # 'UGRD_m/s_8750_m',
+    # 'UGRD_m/s_9000_m',
+    # 'UGRD_m/s_9250_m',
+    # 'UGRD_m/s_9500_m',
+    # 'UGRD_m/s_9750_m',
+    # 'UGRD_m/s_10000_m',
+    # 'UGRD_m/s_10250_m',
+    # 'UGRD_m/s_10500_m',
+    # 'UGRD_m/s_10750_m',
+    # 'UGRD_m/s_11000_m',
+    # 'UGRD_m/s_11250_m',
+    # 'UGRD_m/s_11500_m',
+    # 'UGRD_m/s_11750_m',
+    # 'UGRD_m/s_12000_m',
+    # 'UGRD_m/s_12250_m',
+    # 'UGRD_m/s_12500_m',
+    # 'UGRD_m/s_12750_m',
+    # 'UGRD_m/s_13000_m',
+    # 'UGRD_m/s_13250_m',
+    # 'UGRD_m/s_13500_m',
+    # 'UGRD_m/s_13750_m',
+    # 'UGRD_m/s_14000_m',
+    # 'UGRD_m/s_14250_m',
+    # 'UGRD_m/s_14500_m',
+    # 'UGRD_m/s_14750_m',
+    # 'UGRD_m/s_15000_m',
+    # 'UGRD_m/s_15250_m',
+    # 'UGRD_m/s_15500_m',
+    # 'UGRD_m/s_15750_m',
+    # 'UGRD_m/s_16000_m',
+    # 'UGRD_m/s_16250_m',
+    # 'UGRD_m/s_16500_m'
+ ]
+
+VGRD_m/s: [ 
+    'VGRD_m/s_0_m',
+    'VGRD_m/s_250_m',
+    'VGRD_m/s_500_m',
+    'VGRD_m/s_750_m',
+    'VGRD_m/s_1000_m',
+    'VGRD_m/s_1250_m',
+    'VGRD_m/s_1500_m',
+    'VGRD_m/s_1750_m',
+    'VGRD_m/s_2000_m',
+    'VGRD_m/s_2250_m',
+    'VGRD_m/s_2500_m',
+    'VGRD_m/s_2750_m',
+    'VGRD_m/s_3000_m',
+    'VGRD_m/s_3250_m',
+    'VGRD_m/s_3500_m',
+    'VGRD_m/s_3750_m',
+    'VGRD_m/s_4000_m',
+    'VGRD_m/s_4250_m',
+    'VGRD_m/s_4500_m',
+    'VGRD_m/s_4750_m',
+    'VGRD_m/s_5000_m',
+    # 'VGRD_m/s_5250_m',
+    # 'VGRD_m/s_5500_m',
+    # 'VGRD_m/s_5750_m',
+    # 'VGRD_m/s_6000_m',
+    # 'VGRD_m/s_6250_m',
+    # 'VGRD_m/s_6500_m',
+    # 'VGRD_m/s_6750_m',
+    # 'VGRD_m/s_7000_m',
+    # 'VGRD_m/s_7250_m',
+    # 'VGRD_m/s_7500_m',
+    # 'VGRD_m/s_7750_m',
+    # 'VGRD_m/s_8000_m',
+    # 'VGRD_m/s_8250_m',
+    # 'VGRD_m/s_8500_m',
+    # 'VGRD_m/s_8750_m',
+    # 'VGRD_m/s_9000_m',
+    # 'VGRD_m/s_9250_m',
+    # 'VGRD_m/s_9500_m',
+    # 'VGRD_m/s_9750_m',
+    # 'VGRD_m/s_10000_m',
+    # 'VGRD_m/s_10250_m',
+    # 'VGRD_m/s_10500_m',
+    # 'VGRD_m/s_10750_m',
+    # 'VGRD_m/s_11000_m',
+    # 'VGRD_m/s_11250_m',
+    # 'VGRD_m/s_11500_m',
+    # 'VGRD_m/s_11750_m',
+    # 'VGRD_m/s_12000_m',
+    # 'VGRD_m/s_12250_m',
+    # 'VGRD_m/s_12500_m',
+    # 'VGRD_m/s_12750_m',
+    # 'VGRD_m/s_13000_m',
+    # 'VGRD_m/s_13250_m',
+    # 'VGRD_m/s_13500_m',
+    # 'VGRD_m/s_13750_m',
+    # 'VGRD_m/s_14000_m',
+    # 'VGRD_m/s_14250_m',
+    # 'VGRD_m/s_14500_m',
+    # 'VGRD_m/s_14750_m',
+    # 'VGRD_m/s_15000_m',
+    # 'VGRD_m/s_15250_m',
+    # 'VGRD_m/s_15500_m',
+    # 'VGRD_m/s_15750_m',
+    # 'VGRD_m/s_16000_m',
+    # 'VGRD_m/s_16250_m',
+    # 'VGRD_m/s_16500_m'
+ ]
+ 
+callbacks:
+    EarlyStopping:
+        monitor: "val_ave_acc"
+        patience: 9
+        mode: "max"
+        verbose: 0
+        restore_best_weights: 1
+    ReduceLROnPlateau:
+        monitor: "val_ave_acc"
+        factor: 0.1
+        patience: 3
+        min_lr: 0.000000000000001
+        mode: "max"
+        verbose: 0
+    CSVLogger:
+        filename: "training_log.csv"
+        separator: ","
+        append: 1 # all ensembles will write to the same log
+#     ModelCheckpoint:
+#         filepath: "best"
+#         monitor: "val_f1"
+#         #save_weights: 1
+#         save_best_only: 1
+#         mode: "max"
+#         verbose: 0
+    
+case_studies: 
+    texas: [
+        '2021-02-10',
+        '2021-02-11',
+        '2021-02-12',
+        '2021-02-13',
+        '2021-02-14',
+        '2021-02-15',
+        '2021-02-16',
+        '2021-02-17',
+        '2021-02-18',
+        '2021-02-19'
+     ]
+    new_york: ['2022-02-03', '2022-02-04']
+    ne_noreaster: [
+        '2017-03-11',
+        '2017-03-12',
+        '2017-03-13',
+        '2017-03-14',
+        '2017-03-15',
+        '2017-03-16',
+        '2017-03-17'
+     ]
+    dec_ice_storm: [
+        '2016-12-15',
+        '2016-12-16',
+        '2016-12-17',
+        '2016-12-18',
+        '2016-12-19',
+        '2016-12-20'
+     ]
+     
+pbs:
+  name: ptype-mlp-unw
+  select: 1
+  ncpus: 8
+  ngpus: 1
+  mem: 128GB
+  walltime: 12:00:00
+  gpu_type: v100
+  account: NAML0001
+  queue: casper
+  env_setup: |
+    source ~/.bashrc 
+    conda activate evidential

@@ -1,0 +1,23 @@
+model:
+    hidden_layers: 2
+    hidden_neurons: 128
+    activation: "relu"
+    optimizer: "adam"
+    sgd_momentum: 0.9
+    adam_beta_1: 0.9
+    adam_beta_2: 0.999
+    evidential_coef: 0.05
+    uncertainties: True
+    lr: 0.001
+    kernel_reg: 'l2'
+    l1_weight: 0.01
+    l2_weight: 0.01
+    batch_size: 1000
+    use_noise: False
+    noise_sd: 0.01
+    use_dropout: False
+    dropout_alpha: 0.1
+    epochs: 500
+    verbose: 0
+    save_path: '.'
+    model_name: 'model.h5'

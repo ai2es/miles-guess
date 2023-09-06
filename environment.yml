@@ -1,0 +1,35 @@
+name: evidential
+channels:
+  - conda-forge
+dependencies:
+  - python
+  - numpy
+  - scipy
+  - matplotlib
+  - xarray
+  - netcdf4
+  - dask
+  - pandas
+  - pyyaml
+  - pytest
+  - distributed
+  - pip
+  - pyproj
+  - jupyter
+  - jupyterlab
+  - cartopy
+  - tqdm
+  - sphinx
+  - numba
+  - cython
+  - pip:
+    - tensorflow
+    - tensorflow_addons
+    - pyarrow
+    - fastparquet
+    - imblearn
+    - echo-opt
+    - hagelslag
+    - git+https://github.com/NCAR/bridgescaler
+    - git+https://github.com/ai2es/ptype-physical.git@schreck
+    - .
