@@ -1,5 +1,5 @@
 seed: 1000
-save_loc: "/glade/work/schreck/repos/evidential/main/results/test"
+save_loc: "./"
 training_metric: "val_mae"
 direction: "min"
 

@@ -187,7 +187,7 @@ def trainer(conf, trial=False, mode="single"):
                 y_test = y_scaler.transform(test_data[output_cols])
             else:
                 y_train = train_data[output_cols].values
-                y_valid = valid_data[output_cols].values
+                y_valid = valid_data[output_cols].values 
                 y_test = test_data[output_cols].values
 
             # Copy / initialize model
@@ -209,8 +209,8 @@ def trainer(conf, trial=False, mode="single"):
             # Get the value of the metric
             if "pit" in training_metric:
                 pitd = []
-                y_pred = model.predict(x_valid)
-                mu, var = model.calc_uncertainties(y_pred, y_scaler)
+                mu, var = model.predict(x_valid, y_scaler)
+                #mu, var = model.calc_uncertainties(y_pred, y_scaler)
                 for i, col in enumerate(output_cols):
                     pitd.append(
                         pit_deviation(
@@ -236,8 +236,39 @@ def trainer(conf, trial=False, mode="single"):
             logger.info(
                 f"Finished model/data split {model_seed}/{data_seed} with metric {training_metric} = {optimization_metric}"
             )
+            
+            ##########
+            #
+            # SAVE MODEL
+            #
+            ########## 
+            
+            # Save model weights
+            model.model_name = f"model_seed{model_seed}_split{data_seed}.h5"
+            model.save_model()
+            
+            if conf["ensemble"]["n_splits"] > 1 or conf["ensemble"]["n_models"] > 1:
+                pd_history = pd.DataFrame.from_dict(history.history)
+                pd_history["data_split"] = data_seed
+                pd_history["model_split"] = model_seed
+                pd_history.to_csv(
+                    os.path.join(conf["save_loc"], mode, "models", f"training_log_seed{model_seed}_split{data_seed}.csv")
+                )
+            
+            # Save scalers
+            for scaler_name, scaler in zip(
+                ["input", "output"], [x_scaler, y_scaler]
+            ):
+                fn = os.path.join(
+                    save_loc, f"{mode}/scalers", f"{scaler_name}.json"
+                )
+                try:
+                    save_scaler(scaler, fn)
+                except TypeError:
+                    with open(fn, "wb") as fid:
+                        pickle.dump(scaler, fid)
 
-            # Save if its the best model
+            # Symlink if its the best model
             c1 = (direction == "min") and (optimization_metric < best_model_score)
             c2 = (direction == "max") and (optimization_metric > best_model_score)
             if c1 | c2:
@@ -246,19 +277,36 @@ def trainer(conf, trial=False, mode="single"):
                 best_data_split = data_seed
                 model.model_name = "best.h5"
                 model.save_model()
-
+                # ensemble_name = f"model_seed{model_seed}_split{data_seed}"
+                # os.symlink(
+                #     os.path.join(save_loc, mode, "models", f"{ensemble_name}.h5"),
+                #     os.path.join(save_loc, mode, "models", "best.h5"),
+                # )
+                # os.symlink(
+                #     os.path.join(save_loc, mode, "models", f"{ensemble_name}_training_var.txt"),
+                #     os.path.join(save_loc, mode, "models", "best_training_var.txt"),
+                # )
                 # Save scalers
+                # for scaler_name in ["input", "output"]:
+                #     fn1 = os.path.join(
+                #         save_loc, f"{mode}/scalers", f"{scaler_name}.json"
+                #     )
+                #     fn2 = os.path.join(
+                #         save_loc, f"{mode}/scalers", f"best_{scaler_name}.json"
+                #     )
+                #     os.symlink(fn1, fn2)
                 for scaler_name, scaler in zip(
                     ["input", "output"], [x_scaler, y_scaler]
                 ):
                     fn = os.path.join(
-                        save_loc, f"{mode}/scalers", f"{scaler_name}.json"
+                        save_loc, f"{mode}/scalers", f"best_{scaler_name}.json"
                     )
                     try:
                         save_scaler(scaler, fn)
                     except TypeError:
                         with open(fn, "wb") as fid:
                             pickle.dump(scaler, fid)
+                    
 
             if trial is not False:
                 continue
@@ -268,19 +316,19 @@ def trainer(conf, trial=False, mode="single"):
                 ["test"], [x_test], [test_data]
             ):
 
-                y_pred = model.predict(x_split)
-                mu, aleatoric = model.calc_uncertainties(y_pred, y_scaler)
+                mu, var = model.predict(x_split, y_scaler)
+                #mu, aleatoric = model.calc_uncertainties(y_pred, y_scaler)
 
                 if mode == "seed":
                     ensemble_mu[model_seed] = mu
-                    ensemble_var[model_seed] = aleatoric
+                    ensemble_var[model_seed] = var
                 else:
                     ensemble_mu[data_seed] = mu
-                    ensemble_var[data_seed] = aleatoric
+                    ensemble_var[data_seed] = var
 
                 # Save the ensemble member df
                 df[[f"{x}_pred" for x in output_cols]] = mu
-                df[[f"{x}_ale" for x in output_cols]] = aleatoric
+                df[[f"{x}_ale" for x in output_cols]] = var
                 df.to_csv(
                     os.path.join(
                         save_loc, f"{mode}/evaluate", f"{split}_{data_seed}.csv"

@@ -73,10 +73,11 @@ callbacks:
     separator: ","
     append: False
   ModelCheckpoint:
-    filepath: "model.h5"
+    filepath: "tmp.h5"
     monitor: "val_mae"
-    save_weights: True
-    save_best_only: True
+    save_weights: False
+    save_best_only: False
+    restore_best_weights: True
     mode: "min"
     verbose: 0
     

@@ -66,7 +66,7 @@ model:
   metrics: mae
   model_name: best.h5
   optimizer: adam
-  save_path: /glade/scratch/schreck/repos/evidential/results/surface_layer/production/data/friction_velocity/ensemble
+  save_path: ./
   uncertainties: false
   use_dropout: true
   use_noise: false
@@ -85,6 +85,6 @@ pbs:
   queue: casper
   select: 1
   walltime: 86400
-save_loc: /glade/scratch/schreck/repos/evidential/results/surface_layer/production/data/friction_velocity/ensemble
+save_loc: ./
 seed: 1000
 training_metric: val_pitd

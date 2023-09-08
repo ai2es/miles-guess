@@ -72,6 +72,19 @@ def trainer(conf, trial=False):
 
     model_params = conf["model"]
     model_params["save_path"] = save_loc
+    
+    if trial is False:  # Dont create directories if ECHO is running
+        os.makedirs(os.path.join(save_loc, f"models"), exist_ok=True)
+        os.makedirs(os.path.join(save_loc, f"scalers"), exist_ok=True)
+        os.makedirs(os.path.join(save_loc, "evaluate"), exist_ok=True)
+        os.makedirs(os.path.join(save_loc, "metrics"), exist_ok=True)
+        conf["model"]["save_path"] = os.path.join(save_loc, f"models")
+        
+        if not os.path.isfile(os.path.join(save_loc, f"models", "model.yml")):
+            with open(
+                os.path.join(save_loc, f"models", "model.yml"), "w"
+            ) as fid:
+                yaml.dump(conf, fid)
 
     # Load data, splitter, and scalers
     data = pd.read_csv(conf["data"]["save_loc"])
@@ -147,7 +160,7 @@ def trainer(conf, trial=False):
             x_train,
             y_train,
             validation_data=(x_valid, y_valid),
-            callbacks=get_callbacks(conf, path_extend=""),
+            callbacks=get_callbacks(conf, path_extend=f"models"),
         )
         history = model.model.history
 
@@ -163,20 +176,6 @@ def trainer(conf, trial=False):
                         pred_type="gaussian",
                     )
                 )
-                # _pitd.append(
-                #     pit_deviation_skill_score(
-                #         y_valid[:, i],
-                #         np.stack([mu[:, i], np.sqrt(ale[:, i])], -1),
-                #         pred_type="gaussian",
-                #     )
-                # )
-                # _pitd.append(
-                #     pit_deviation_skill_score(
-                #         y_valid[:, i],
-                #         np.stack([mu[:, i], np.sqrt(epi[:, i])], -1),
-                #         pred_type="gaussian",
-                #     )
-                # )
             optimization_metric = np.mean(_pitd)
         elif "R2" in training_metric:
             mu, ale, epi = model.predict(x_valid)
@@ -200,6 +199,36 @@ def trainer(conf, trial=False):
             f"Finished split {data_seed} with metric {training_metric} = {optimization_metric}"
         )
 
+        ##########
+        #
+        # SAVE MODEL
+        #
+        ########## 
+
+        # Save model weights
+        model.model_name = f"model_split{data_seed}.h5"
+        model.save_model()
+
+        if conf["ensemble"]["n_splits"] > 1 or conf["ensemble"]["n_models"] > 1:
+            pd_history = pd.DataFrame.from_dict(history.history)
+            pd_history["data_split"] = data_seed
+            pd_history.to_csv(
+                os.path.join(conf["save_loc"], f"training_log_split{data_seed}.csv")
+            )
+
+        # Save scalers
+        for scaler_name, scaler in zip(
+            ["input", "output"], [x_scaler, y_scaler]
+        ):
+            fn = os.path.join(
+                save_loc, "scalers", f"{scaler_name}_split{data_seed}.json"
+            )
+            try:
+                save_scaler(scaler, fn)
+            except TypeError:
+                with open(fn, "wb") as fid:
+                    pickle.dump(scaler, fid)
+
         # Save if its the best model
         c1 = (direction == "min") and (optimization_metric < best_model_score)
         c2 = (direction == "max") and (optimization_metric > best_model_score)
@@ -209,13 +238,11 @@ def trainer(conf, trial=False):
             best_split = data_seed
             model.model_name = "best.h5"
             model.save_model()
-            
-            # Save scalers
             for scaler_name, scaler in zip(
                 ["input", "output"], [x_scaler, y_scaler]
             ):
                 fn = os.path.join(
-                    conf["model"]["save_path"], f"{scaler_name}.json"
+                    save_loc, "scalers", f"best_{scaler_name}.json"
                 )
                 try:
                     save_scaler(scaler, fn)
@@ -224,8 +251,8 @@ def trainer(conf, trial=False):
                         pickle.dump(scaler, fid)
 
         # evaluate on the test holdout split
-        result = model.predict(x_test, scaler=y_scaler)
-        mu, aleatoric, epistemic = result
+        mu, aleatoric, epistemic = model.predict(x_test, scaler=y_scaler)
+        
         ensemble_mu[data_seed] = mu
         ensemble_ale[data_seed] = aleatoric
         ensemble_epi[data_seed] = epistemic
@@ -256,7 +283,6 @@ def trainer(conf, trial=False):
     _test_data[[f"{x}_ale" for x in output_cols]] = aleatoric
     _test_data[[f"{x}_epi" for x in output_cols]] = epistemic
 
-    os.makedirs(os.path.join(save_loc, "evaluate"), exist_ok=True)
     _test_data.to_csv(os.path.join(save_loc, "evaluate/test.csv"))
     np.save(os.path.join(save_loc, "evaluate/test_mu.npy"), ensemble_mu)
     np.save(os.path.join(save_loc, "evaluate/test_aleatoric.npy"), ensemble_ale)
@@ -266,7 +292,6 @@ def trainer(conf, trial=False):
     pd.DataFrame.from_dict(pitd_dict).to_csv(os.path.join(save_loc, "evaluate/pitd.csv"))
 
     # make some figures
-    os.makedirs(os.path.join(save_loc, "metrics"), exist_ok=True)
     compute_results(
         _test_data,
         output_cols,
@@ -317,15 +342,6 @@ if __name__ == "__main__":
 
     save_loc = conf["save_loc"]
     os.makedirs(save_loc, exist_ok=True)
-
-    conf["model"]["save_path"] = save_loc
-    conf["model"]["model_name"] = "best.h5"
-
-    if not os.path.isfile(os.path.join(save_loc, "model.yml")):
-        shutil.copyfile(config, os.path.join(save_loc, "model.yml"))
-    else:
-        with open(os.path.join(save_loc, "model.yml"), "w") as fid:
-            yaml.dump(conf, fid)
 
     if launch:
         from pathlib import Path

@@ -196,11 +196,20 @@ def trainer(conf, trial=False, mode="single"):
                     if x not in trial.params
                 }
 
+            # Save model weights
+            model.model_name = f"model_seed{model_seed}_split{data_seed}.h5"
+            model.save_model()
+            
             # Save if its the best model
             if min(history.history[training_metric]) < best_model_score:
                 best_model = model
                 best_data_split = data_seed
-                model.save_model()
+                os.symlink(
+                    os.path.join(save_loc, "models", f"model_seed{model_seed}_split{data_seed}.h5"),
+                    os.path.join(save_loc, "models", "best.h5"),
+                )
+                #model.model_name = "best.h5"
+                #model.save_model()
 
             # evaluate on the test holdout split
             _ensemble_pred[data_seed] = y_scaler.inverse_transform(

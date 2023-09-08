@@ -19,7 +19,6 @@ import logging
 
 
 logger = logging.getLogger(__name__)
-#eps = np.finfo(np.float32).eps
 
 
 class RegressorDNN(object):
@@ -205,9 +204,13 @@ class RegressorDNN(object):
         model_class.model.load_weights(weights)
         return model_class
 
-    def predict(self, x, scaler=None, batch_size=None):
+    def predict(self, x, scaler=None, batch_size=None, y_scaler=None):
         _batch_size = self.batch_size if batch_size is None else batch_size
         y_out = self.model.predict(x, batch_size=_batch_size)
+        if y_scaler:
+            if y_out.shape[-1] == 1:
+                y_out = np.expand_dims(y_out, 1)
+            y_out = y_scaler.inverse_transform(y_out)
         return y_out
 
     def predict_monte_carlo(
@@ -224,13 +227,38 @@ class RegressorDNN(object):
                 for i in range(0, x_test.shape[0], _batch_size)
             ]
             output = np.concatenate(output, axis=0)
-            # output = self.model(x_test, training=True)
             if y_scaler:
                 if output.shape[-1] == 1:
                     output = np.expand_dims(output, 1)
                 output = y_scaler.inverse_transform(output)
             dropout_mu[i] = output
         return dropout_mu
+    
+    def predict_ensemble(self, x, weight_locations, y_scaler=None, batch_size=None):
+        num_models = len(weight_locations)
+
+        # Initialize output_shape based on the first model's prediction
+        if num_models > 0:
+            first_model = self.model
+            first_model.load_weights(weight_locations[0])
+            first_prediction = self.predict(x, batch_size=batch_size, y_scaler = y_scaler)
+            output_shape = first_prediction.shape[1:]
+            predictions = np.empty((num_models,) + (x.shape[0],) + output_shape)
+            predictions[0] = first_prediction
+        else:
+            output_shape = ()  # Default shape if no models
+            predictions = np.empty((num_models,) + (x.shape[0],) + output_shape)
+
+        # Predict for the remaining models
+        for i, weight_location in enumerate(weight_locations[1:]):
+            model_instance = self.model
+            model_instance.load_weights(weight_location)
+            y_prob = self.predict(x, batch_size=batch_size, y_scaler=y_scaler)
+            predictions[i + 1] = y_prob
+
+        return predictions
+    
+    
 
 class EvidentialRegressorDNN(object):
     """
@@ -432,7 +460,7 @@ class EvidentialRegressorDNN(object):
         )
         # Save the training variances
         np.savetxt(
-            os.path.join(self.save_path, "training_var.txt"),
+            os.path.join(self.save_path, f'{self.model_name.strip(".h5")}_training_var.txt'),
             np.array(self.training_var),
         )
         return
@@ -457,7 +485,7 @@ class EvidentialRegressorDNN(object):
 
         # Load the variances
         model_class.training_var = np.loadtxt(
-            os.path.join(os.path.join(conf["model"]["save_path"], "training_var.txt"))
+            os.path.join(os.path.join(conf["model"]["save_path"], "best_training_var.txt"))
         )
         
         if not model_class.training_var.shape:
@@ -523,6 +551,38 @@ class EvidentialRegressorDNN(object):
             mu = y_scaler.inverse_transform(mu)
 
         return mu, v, alpha, beta
+    
+    def predict_ensemble(self, x, weight_locations, scaler=None, batch_size=None):
+        num_models = len(weight_locations)
+
+        # Initialize output_shape based on the first model's prediction
+        if num_models > 0:
+            first_model = self.model
+            first_model.load_weights(weight_locations[0])
+            mu, ale, epi = self.predict(x, batch_size=batch_size, scaler=scaler)
+            output_shape = mu.shape[1:]
+            ensemble_mu = np.empty((num_models,) + (x.shape[0],) + output_shape)
+            ensemble_ale = np.empty((num_models,) + (x.shape[0],) + output_shape)
+            ensemble_epi = np.empty((num_models,) + (x.shape[0],) + output_shape)
+            ensemble_mu[0] = mu
+            ensemble_ale[0] = ale
+            ensemble_epi[0] = epi
+        else:
+            output_shape = ()  # Default shape if no models
+            ensemble_mu = np.empty((num_models,) + (x.shape[0],) + output_shape)
+            ensemble_ale = np.empty((num_models,) + (x.shape[0],) + output_shape)
+            ensemble_epi = np.empty((num_models,) + (x.shape[0],) + output_shape)
+
+        # Predict for the remaining models
+        for i, weight_location in enumerate(weight_locations[1:]):
+            model_instance = self.model
+            model_instance.load_weights(weight_location)
+            mu, ale, epi =  self.predict(x, batch_size=batch_size, scaler=scaler)
+            ensemble_mu[i + 1] = mu
+            ensemble_ale[i + 1] = ale
+            ensemble_epi[i + 1] = epi
+
+        return ensemble_mu, ensemble_ale, ensemble_epi
 
 
 class GaussianRegressorDNN(EvidentialRegressorDNN):
@@ -647,6 +707,12 @@ class GaussianRegressorDNN(EvidentialRegressorDNN):
             model_class.training_var = [model_class.training_var]
 
         return model_class
+    
+    def predict(self, x, scaler=None, batch_size=None):
+        _batch_size = self.batch_size if batch_size is None else batch_size
+        y_out = self.model.predict(x, batch_size=_batch_size)
+        y_out = self.calc_uncertainties(y_out, scaler)
+        return y_out
 
     def predict_monte_carlo(
         self, x_test, y_test, forward_passes, y_scaler=None, batch_size=None
@@ -697,6 +763,34 @@ class GaussianRegressorDNN(EvidentialRegressorDNN):
             mu = y_scaler.inverse_transform(mu)
 
         return mu, var
+    
+    def predict_ensemble(self, x, weight_locations, batch_size=None, scaler=None):
+        num_models = len(weight_locations)
+
+        # Initialize output_shape based on the first model's prediction
+        if num_models > 0:
+            first_model = self.model
+            first_model.load_weights(weight_locations[0])
+            mu, var = self.predict(x, batch_size=batch_size, scaler=scaler)
+            output_shape = mu.shape[1:]
+            ensemble_mu = np.empty((num_models,) + (x.shape[0],) + output_shape)
+            ensemble_var = np.empty((num_models,) + (x.shape[0],) + output_shape)
+            ensemble_mu[0] = mu
+            ensemble_var[0] = var
+        else:
+            output_shape = ()  # Default shape if no models
+            ensemble_mu = np.empty((num_models,) + (x.shape[0],) + output_shape)
+            ensemble_var = np.empty((num_models,) + (x.shape[0],) + output_shape)
+
+        # Predict for the remaining models
+        for i, weight_location in enumerate(weight_locations[1:]):
+            model_instance = self.model
+            model_instance.load_weights(weight_location)
+            mu, var = self.predict(x, scaler=scaler, batch_size=batch_size)
+            ensemble_mu[i + 1] = mu
+            ensemble_var[i + 1] = var
+
+        return ensemble_mu, ensemble_var
 
 
 class CategoricalDNN(object):
@@ -986,6 +1080,30 @@ class CategoricalDNN(object):
             np.sum(-y_prob * np.log(y_prob + epsilon), axis=-1), axis=0
         )  # shape (n_samples,)
         return pred_probs, aleatoric, epistemic, entropy, mutual_info
+    
+    def predict_ensemble(self, x, weight_locations, batch_size=None):
+        num_models = len(weight_locations)
+
+        # Initialize output_shape based on the first model's prediction
+        if num_models > 0:
+            first_model = self.model
+            first_model.load_weights(weight_locations[0])
+            first_prediction = self.predict(x, batch_size=batch_size)
+            output_shape = first_prediction.shape[1:]
+            predictions = np.empty((num_models,) + (x.shape[0],) + output_shape)
+            predictions[0] = first_prediction
+        else:
+            output_shape = ()  # Default shape if no models
+            predictions = np.empty((num_models,) + (x.shape[0],) + output_shape)
+
+        # Predict for the remaining models
+        for i, weight_location in enumerate(weight_locations[1:]):
+            model_instance = self.model
+            model_instance.load_weights(weight_location)
+            y_prob = model_instance.predict(x, batch_size=batch_size)
+            predictions[i + 1] = y_prob
+
+        return predictions
 
     def compute_uncertainties(self, y_pred, num_classes=4):
         return calc_prob_uncertainty(y_pred, num_classes=num_classes)
