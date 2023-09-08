@@ -125,8 +125,8 @@ def brier_multi(targets, probs, num_classes=4, skill_score=True):
     one_hot = np.zeros((targets.size, num_classes))
     one_hot[np.arange(targets.size), targets] = 1
     # Compute MSE with one-hots and probabilities
-    res = np.mean((probs - one_hot) ** 2, axis=1)
-
+    #res = np.mean((probs - one_hot) ** 2, axis=1)
+    res = np.mean((probs - one_hot) ** 2)
     if skill_score:
         tot = np.mean(np.sum((one_hot - np.mean(one_hot)) ** 2, axis=1))
         return 1 - res / tot
@@ -399,7 +399,7 @@ def classifier_discard_fraction(
     prefix=False,
 ):
 
-    fig, axs = plt.subplots(1, 4, figsize=(10, 5), sharey="row")
+    fig, axs = plt.subplots(1, 4, figsize=(10, 3.5), sharey="row")
     db = (1.0 / num_classes) * num_bins
     # df["total"] = np.sqrt(df["aleatoric"] + df["epistemic"])
 

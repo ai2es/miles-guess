@@ -145,7 +145,7 @@ model:
   activation: leaky
   annealing_coeff: 34.593686950910275
   balanced_classes: 1
-  batch_size: 860
+  batch_size: 100
   dropout_alpha: 0.20146936081973893
   epochs: 1000
   hidden_layers: 2

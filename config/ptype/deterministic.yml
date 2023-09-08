@@ -135,7 +135,7 @@ case_studies:
   - '2021-02-17'
   - '2021-02-18'
   - '2021-02-19'
-data_path: /glade/p/cisl/aiml/ai2es/winter_ptypes/ptype_qc/mPING_interpolated_QC2.parquet
+data_path: "../data/ptype_sample.parquet"
 direction: max
 ensemble:
   mc_steps: 100
@@ -145,7 +145,7 @@ model:
   activation: leaky
   annealing_coeff: 50
   balanced_classes: 1
-  batch_size: 3097
+  batch_size: 100
   dropout_alpha: 0.31256692323263807
   epochs: 200
   hidden_layers: 4
