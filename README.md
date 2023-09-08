@@ -1,11 +1,15 @@
-# ev-ml
-Applications of deep evidential regression and classification to earth systems
+# MILES-Guess
+Generalized Uncertainty for Earth System Science (GUESS)
+
+Presented by the Machine Ingetration and Learning in the Earth System (MILES) group at the National Center for Atmospheric Research (NCAR), Boulder CO, USA
 
 ## Contributers 
 * John Schreck
 * David John Gagne
 * Charlie Becker
 * Gabrielle Gantos
+* Dhamma Kimpara
+* Thomas Martin
 
 ## Setup from Scratch
 
@@ -13,17 +17,17 @@ Applications of deep evidential regression and classification to earth systems
 [here](https://docs.conda.io/en/latest/miniconda.html).
 
 * clone evidential repo
-`git clone https://github.com/ai2es/evidential.git`
+`git clone https://github.com/ai2es/miles-guess.git`
 
-`cd evidential`
+`cd miles-guess`
 
-* Create a conda environment for non-Casper users:  
+* Create a conda environment for non-Casper/Derecho users:  
 
 `conda env create -f environment.yml`
 
 `conda activate evidential`
 
-* Create a conda environment for Casper users including Tensorflow 2.12 with GPU support:
+* Create a conda environment for Casper/Derecho users including Tensorflow 2.12 with GPU support:
 
 `conda env create -f environment_casper.yml`
 
