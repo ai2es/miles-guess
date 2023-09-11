@@ -38,8 +38,8 @@ data:
     train_size: 0.9
 
 model:
-    hidden_layers: 2
-    hidden_neurons: 4368
+    hidden_layers: 1
+    hidden_neurons: 500
     activation: "relu"
     optimizer: "adam"
     metrics: "mae"

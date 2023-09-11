@@ -13,7 +13,7 @@ import tensorflow as tf
 from argparse import ArgumentParser
 
 from keras import backend as K
-from evml.keras.models import RegressorDNN
+from evml.keras.model_refactor import BaseRegressor as RegressorDNN
 from evml.keras.callbacks import get_callbacks
 from evml.splitting import load_splitter
 from evml.regression_uq import compute_results

@@ -19,7 +19,7 @@ from argparse import ArgumentParser
 
 from tensorflow.keras import backend as K
 from evml.pit import pit_deviation_skill_score, pit_deviation
-from evml.keras.models import EvidentialRegressorDNN
+from evml.keras.model_refactor import EvidentialRegressorDNN
 from evml.keras.callbacks import get_callbacks
 from evml.splitting import load_splitter
 from evml.regression_uq import compute_results
@@ -167,7 +167,7 @@ def trainer(conf, trial=False):
         # Get the value of the metric
         if "pit" in training_metric:
             _pitd = []
-            mu, ale, epi = model.predict(x_valid)
+            mu, ale, epi = model.predict_uncertainty(x_valid)
             for i, col in enumerate(output_cols):
                 _pitd.append(
                     pit_deviation_skill_score(
@@ -178,7 +178,7 @@ def trainer(conf, trial=False):
                 )
             optimization_metric = np.mean(_pitd)
         elif "R2" in training_metric:
-            mu, ale, epi = model.predict(x_valid)
+            mu, ale, epi = model.predict_uncertainty(x_valid)
             rmse = (y_valid - mu) ** 2
             spread = ale + epi
             optimization_metric = r2_score(rmse, spread)
@@ -213,7 +213,7 @@ def trainer(conf, trial=False):
             pd_history = pd.DataFrame.from_dict(history.history)
             pd_history["data_split"] = data_seed
             pd_history.to_csv(
-                os.path.join(conf["save_loc"], f"training_log_split{data_seed}.csv")
+                os.path.join(conf["save_loc"], "models", f"training_log_split{data_seed}.csv")
             )
 
         # Save scalers
@@ -251,7 +251,7 @@ def trainer(conf, trial=False):
                         pickle.dump(scaler, fid)
 
         # evaluate on the test holdout split
-        mu, aleatoric, epistemic = model.predict(x_test, scaler=y_scaler)
+        mu, aleatoric, epistemic = model.predict_uncertainty(x_test, scaler=y_scaler)
         
         ensemble_mu[data_seed] = mu
         ensemble_ale[data_seed] = aleatoric

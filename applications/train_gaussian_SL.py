@@ -19,7 +19,7 @@ from bridgescaler import save_scaler
 
 from keras import backend as K
 from evml.pit import pit_deviation_skill_score, pit_deviation
-from evml.keras.models import GaussianRegressorDNN
+from evml.keras.model_refactor import GaussianRegressorDNN
 from evml.keras.callbacks import get_callbacks
 from evml.splitting import load_splitter
 from evml.regression_uq import compute_results
@@ -209,7 +209,7 @@ def trainer(conf, trial=False, mode="single"):
             # Get the value of the metric
             if "pit" in training_metric:
                 pitd = []
-                mu, var = model.predict(x_valid, y_scaler)
+                mu, var = model.predict_uncertainty(x_valid, y_scaler)
                 #mu, var = model.calc_uncertainties(y_pred, y_scaler)
                 for i, col in enumerate(output_cols):
                     pitd.append(
@@ -316,8 +316,7 @@ def trainer(conf, trial=False, mode="single"):
                 ["test"], [x_test], [test_data]
             ):
 
-                mu, var = model.predict(x_split, y_scaler)
-                #mu, aleatoric = model.calc_uncertainties(y_pred, y_scaler)
+                mu, var = model.predict_uncertainty(x_split, y_scaler)
 
                 if mode == "seed":
                     ensemble_mu[model_seed] = mu

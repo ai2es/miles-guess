@@ -67,7 +67,6 @@ model:
   model_name: best.h5
   optimizer: adam
   save_path: ./
-  uncertainties: false
   use_dropout: true
   use_noise: false
   verbose: 2

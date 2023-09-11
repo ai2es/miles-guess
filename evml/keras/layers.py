@@ -42,8 +42,8 @@ class DenseNormalGamma(tf.keras.layers.Layer):
         
         
 class DenseNormal(tf.keras.layers.Layer):
-    def __init__(self, units, eps=1e-12):
-        super(DenseNormal, self).__init__()
+    def __init__(self, units, name, eps=1e-12):
+        super(DenseNormal, self).__init__(name=name)
         self.units = int(units)
         self.dense = tfa.layers.SpectralNormalization(tf.keras.layers.Dense(2 * self.units, activation = "sigmoid"))
         #self.dense = tf.keras.layers.Dense(2 * self.units, activation=None)
