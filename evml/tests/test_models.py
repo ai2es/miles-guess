@@ -13,9 +13,9 @@ from evml.keras.models import EvidentialRegressorDNN
 class TestModels(unittest.TestCase):
     def setUp(self):
         # Load configurations for the models
-        self.mlp_config = "../../config/surface_layer/mlp.yml"
-        self.gaussian_config = "../../config/surface_layer/gaussian.yml"
-        self.evidential_config = "../../config/surface_layer/evidential.yml"
+        self.mlp_config = "config/surface_layer/mlp.yml"
+        self.gaussian_config = "config/surface_layer/gaussian.yml"
+        self.evidential_config = "config/surface_layer/evidential.yml"
 
         with open(self.mlp_config) as cf:
             self.mlp_conf = yaml.load(cf, Loader=yaml.FullLoader)
@@ -27,7 +27,7 @@ class TestModels(unittest.TestCase):
             self.evidential_conf = yaml.load(cf, Loader=yaml.FullLoader)
 
         # Instantiate and preprocess the data (as you did before)...
-        data_file = "../../data/sample_cabauw_surface_layer.csv"
+        data_file = "data/sample_cabauw_surface_layer.csv"
         self.data = pd.read_csv(data_file)
         self.data["day"] = self.data["Time"].apply(lambda x: str(x).split(" ")[0])
 
