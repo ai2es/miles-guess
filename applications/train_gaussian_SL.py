@@ -19,13 +19,14 @@ from bridgescaler import save_scaler
 
 from keras import backend as K
 from evml.pit import pit_deviation_skill_score, pit_deviation
-from evml.keras.model_refactor import GaussianRegressorDNN
+from evml.keras.models import GaussianRegressorDNN
 from evml.keras.callbacks import get_callbacks
 from evml.splitting import load_splitter
 from evml.regression_uq import compute_results
 from evml.preprocessing import load_preprocessing
 from evml.keras.seed import seed_everything
 from evml.pbs import launch_pbs_jobs
+from evml.regression_metrics import regression_metrics
 import traceback
 
 
@@ -138,7 +139,8 @@ def trainer(conf, trial=False, mode="single"):
     best_model = None
     best_data_split = None
     best_model_score = 1e10 if direction == "min" else -1e10
-
+    results_dict = defaultdict(list)
+    
     for model_seed in range(n_models):
 
         # Make N train-valid splits using day as grouping variable
@@ -205,32 +207,27 @@ def trainer(conf, trial=False, mode="single"):
                 callbacks=get_callbacks(conf, path_extend=f"{mode}/models"),
             )
             history = model.model.history
+            
+            ####################
+            #
+            # VALIDATE THE MODEL
+            #
+            ####################
 
-            # Get the value of the metric
-            if "pit" in training_metric:
-                pitd = []
-                mu, var = model.predict_uncertainty(x_valid, y_scaler)
-                #mu, var = model.calc_uncertainties(y_pred, y_scaler)
-                for i, col in enumerate(output_cols):
-                    pitd.append(
-                        pit_deviation(
-                            y_valid[:, i],
-                            np.stack([mu[:, i], np.sqrt(var[:, i])], -1),
-                            pred_type="gaussian",
-                        )
-                    )
-                optimization_metric = np.mean(pitd)
-            elif direction == "min":
-                optimization_metric = min(history.history[training_metric])
-            elif direction == "max":
-                optimization_metric = max(history.history[training_metric])
+            # Compute metrics on validation set 
+            mu, ale = model.predict_uncertainty(x_valid)
+            total = np.sqrt(ale)
+            val_metrics = regression_metrics(y_scaler.inverse_transform(y_valid), mu, total)
+            for k, v in val_metrics.items():
+                results_dict[k].append(v)
+            optimization_metric = val_metrics[training_metric]
 
             # If ECHO is running this script, n_splits has been set to 1, return the metric here
             if trial is not False and conf["ensemble"]["monte_carlo_passes"] == 0:
-                return {
-                    training_metric: optimization_metric,
-                    "val_mae": min(history.history["val_mae"]),
-                }
+                for metric in ["val_r2", "val_rmse_ss", "val_crps_ss"]:
+                    if val_metrics[metric] < 0.0:  # ECHO maxing out negative numbers? Not sure why ... 
+                        val_metrics[metric] = 0.0
+                return val_metrics
 
             # Write to the logger
             logger.info(
@@ -260,7 +257,7 @@ def trainer(conf, trial=False, mode="single"):
                 ["input", "output"], [x_scaler, y_scaler]
             ):
                 fn = os.path.join(
-                    save_loc, f"{mode}/scalers", f"{scaler_name}.json"
+                    save_loc, f"{mode}/scalers", f"{scaler_name}_seed{model_seed}_split{data_seed}.json"
                 )
                 try:
                     save_scaler(scaler, fn)
@@ -274,49 +271,49 @@ def trainer(conf, trial=False, mode="single"):
             if c1 | c2:
                 best_model = model
                 best_model_score = optimization_metric
-                best_data_split = data_seed
-                model.model_name = "best.h5"
-                model.save_model()
-                # ensemble_name = f"model_seed{model_seed}_split{data_seed}"
-                # os.symlink(
-                #     os.path.join(save_loc, mode, "models", f"{ensemble_name}.h5"),
-                #     os.path.join(save_loc, mode, "models", "best.h5"),
-                # )
-                # os.symlink(
-                #     os.path.join(save_loc, mode, "models", f"{ensemble_name}_training_var.txt"),
-                #     os.path.join(save_loc, mode, "models", "best_training_var.txt"),
-                # )
-                # Save scalers
-                # for scaler_name in ["input", "output"]:
-                #     fn1 = os.path.join(
-                #         save_loc, f"{mode}/scalers", f"{scaler_name}.json"
-                #     )
-                #     fn2 = os.path.join(
-                #         save_loc, f"{mode}/scalers", f"best_{scaler_name}.json"
-                #     )
-                #     os.symlink(fn1, fn2)
-                for scaler_name, scaler in zip(
-                    ["input", "output"], [x_scaler, y_scaler]
-                ):
-                    fn = os.path.join(
+                
+                # Break the current symlink
+                if os.path.isfile(os.path.join(save_loc, mode, "models", "best.h5")):
+                    os.remove(os.path.join(save_loc, mode, "models", "best.h5"))
+                    os.remove(os.path.join(save_loc, mode, "models", "best_training_var.txt"))
+                
+                ensemble_name = f"model_seed{model_seed}_split{data_seed}"
+                os.symlink(
+                    os.path.join(save_loc, mode, "models", f"{ensemble_name}.h5"),
+                    os.path.join(save_loc, mode, "models", "best.h5"),
+                )
+                os.symlink(
+                    os.path.join(save_loc, mode, "models", f"{ensemble_name}_training_var.txt"),
+                    os.path.join(save_loc, mode, "models", "best_training_var.txt"),
+                )
+                #Save scalers
+                for scaler_name in ["input", "output"]:
+                    if os.path.isfile(os.path.join(save_loc, f"{mode}/scalers", f"best_{scaler_name}.json")):
+                        os.remove(os.path.join(save_loc, f"{mode}/scalers", f"best_{scaler_name}.json"))
+                    fn1 = os.path.join(
+                        save_loc, f"{mode}/scalers", f"{scaler_name}_seed{model_seed}_split{data_seed}.json"
+                    )
+                    fn2 = os.path.join(
                         save_loc, f"{mode}/scalers", f"best_{scaler_name}.json"
                     )
-                    try:
-                        save_scaler(scaler, fn)
-                    except TypeError:
-                        with open(fn, "wb") as fid:
-                            pickle.dump(scaler, fid)
-                    
-
+                    os.symlink(fn1, fn2)
+                
             if trial is not False:
                 continue
+                
+            ################
+            #
+            # TEST THE MODEL
+            #
+            ################
 
             # Evaluate on the test holdout split
-            for split, x_split, df in zip(
-                ["test"], [x_test], [test_data]
-            ):
-
+            for split, x_split, df in zip(["test"], [x_test], [test_data]):
                 mu, var = model.predict_uncertainty(x_split, y_scaler)
+                total = np.sqrt(var)
+                test_metrics = regression_metrics(y_scaler.inverse_transform(y_test), mu, total, split="test")
+                for k,v in test_metrics.items():
+                    results_dict[k].append(v)
 
                 if mode == "seed":
                     ensemble_mu[model_seed] = mu
@@ -338,6 +335,10 @@ def trainer(conf, trial=False, mode="single"):
             del model
             tf.keras.backend.clear_session()
             gc.collect()
+    
+    # Save metrics
+    pd.DataFrame.from_dict(results_dict).to_csv(
+        os.path.join(save_loc, f"{mode}/evaluate/ensemble_metrics.csv"))
 
     # Evaluation and calculation of uncertainties
     if mode != "single" and trial is False:
@@ -351,6 +352,17 @@ def trainer(conf, trial=False, mode="single"):
         _test_data[[f"{x}_pred" for x in output_cols]] = ensemble_mean
         _test_data[[f"{x}_ale" for x in output_cols]] = ensemble_aleatoric
         _test_data[[f"{x}_epi" for x in output_cols]] = ensemble_epistemic
+        
+        # Compute metrics on the test split for the ensemble
+        best_metrics = {}
+        total = np.sqrt(ensemble_aleatoric + ensemble_epistemic)
+        for k, v in regression_metrics(y_scaler.inverse_transform(y_test), ensemble_mean, total, split="test").items():
+            best_metrics[k] = v
+        
+        pd.DataFrame.from_dict({
+            "metric": list(best_metrics.keys()),
+            "value": list(best_metrics.values())
+        }).to_csv(os.path.join(save_loc, f"{mode}/evaluate/best_metrics.csv"))
 
         # save
         _test_data.to_csv(os.path.join(save_loc, f"{mode}/evaluate/test.csv"))
@@ -385,7 +397,7 @@ def trainer(conf, trial=False, mode="single"):
             x,
             y,
             forward_passes=monte_carlo_passes,
-            y_scaler=y_scaler,
+            scaler=y_scaler,
         )
 
         # Calculating mean across multiple MCD forward passes
@@ -396,21 +408,17 @@ def trainer(conf, trial=False, mode="single"):
         # Calculating variance across multiple MCD forward passes
         mc_epistemic = np.var(dropout_mu, axis=0)  # shape (n_samples, n_classes)
 
-        # Compute PITD
-        pitd_dict = defaultdict(list)
-        for i, col in enumerate(output_cols):
-            pitd_dict[col].append(
-                pit_deviation(
-                    y[:, i],
-                    np.stack(
-                        [mu[:, i], np.sqrt(mc_aleatoric[:, i] + mc_epistemic[:, i])], -1
-                    ),
-                    pred_type="gaussian",
-                )
-            )
+        # Compute metrics on the test split for the ensemble
+        best_metrics = {}
+        total = np.sqrt(mc_aleatoric + mc_epistemic)
+        for k, v in regression_metrics(y_scaler.inverse_transform(y), mc_mu, total, split="test").items():
+            best_metrics[k] = v
+        pd.DataFrame.from_dict({
+            "metric": list(best_metrics.keys()),
+            "value": list(best_metrics.values())
+        }).to_csv(os.path.join(save_loc, f"{mode}/evaluate/best_metrics.csv"))
 
         if trial is not False:
-            optimization_metric = np.mean([x[0] for x in pitd_dict.values()])
             return {
                 training_metric: optimization_metric,
                 "val_mae": min(history.history["val_mae"]),
@@ -427,10 +435,7 @@ def trainer(conf, trial=False, mode="single"):
             dropout_aleatoric,
         )
         _test_data.to_csv(os.path.join(save_loc, "monte_carlo/evaluate/test.csv"))
-        pd.DataFrame.from_dict(pitd_dict).to_csv(
-            os.path.join(save_loc, "monte_carlo/evaluate/pit.csv")
-        )
-
+    
         # Make some figures
         compute_results(
             _test_data,

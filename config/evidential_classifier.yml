@@ -1,0 +1,196 @@
+TEMP_C:
+- TEMP_C_0_m
+- TEMP_C_250_m
+- TEMP_C_500_m
+- TEMP_C_750_m
+- TEMP_C_1000_m
+- TEMP_C_1250_m
+- TEMP_C_1500_m
+- TEMP_C_1750_m
+- TEMP_C_2000_m
+- TEMP_C_2250_m
+- TEMP_C_2500_m
+- TEMP_C_2750_m
+- TEMP_C_3000_m
+- TEMP_C_3250_m
+- TEMP_C_3500_m
+- TEMP_C_3750_m
+- TEMP_C_4000_m
+- TEMP_C_4250_m
+- TEMP_C_4500_m
+- TEMP_C_4750_m
+- TEMP_C_5000_m
+T_DEWPOINT_C:
+- T_DEWPOINT_C_0_m
+- T_DEWPOINT_C_250_m
+- T_DEWPOINT_C_500_m
+- T_DEWPOINT_C_750_m
+- T_DEWPOINT_C_1000_m
+- T_DEWPOINT_C_1250_m
+- T_DEWPOINT_C_1500_m
+- T_DEWPOINT_C_1750_m
+- T_DEWPOINT_C_2000_m
+- T_DEWPOINT_C_2250_m
+- T_DEWPOINT_C_2500_m
+- T_DEWPOINT_C_2750_m
+- T_DEWPOINT_C_3000_m
+- T_DEWPOINT_C_3250_m
+- T_DEWPOINT_C_3500_m
+- T_DEWPOINT_C_3750_m
+- T_DEWPOINT_C_4000_m
+- T_DEWPOINT_C_4250_m
+- T_DEWPOINT_C_4500_m
+- T_DEWPOINT_C_4750_m
+- T_DEWPOINT_C_5000_m
+UGRD_m/s:
+- UGRD_m/s_0_m
+- UGRD_m/s_250_m
+- UGRD_m/s_500_m
+- UGRD_m/s_750_m
+- UGRD_m/s_1000_m
+- UGRD_m/s_1250_m
+- UGRD_m/s_1500_m
+- UGRD_m/s_1750_m
+- UGRD_m/s_2000_m
+- UGRD_m/s_2250_m
+- UGRD_m/s_2500_m
+- UGRD_m/s_2750_m
+- UGRD_m/s_3000_m
+- UGRD_m/s_3250_m
+- UGRD_m/s_3500_m
+- UGRD_m/s_3750_m
+- UGRD_m/s_4000_m
+- UGRD_m/s_4250_m
+- UGRD_m/s_4500_m
+- UGRD_m/s_4750_m
+- UGRD_m/s_5000_m
+VGRD_m/s:
+- VGRD_m/s_0_m
+- VGRD_m/s_250_m
+- VGRD_m/s_500_m
+- VGRD_m/s_750_m
+- VGRD_m/s_1000_m
+- VGRD_m/s_1250_m
+- VGRD_m/s_1500_m
+- VGRD_m/s_1750_m
+- VGRD_m/s_2000_m
+- VGRD_m/s_2250_m
+- VGRD_m/s_2500_m
+- VGRD_m/s_2750_m
+- VGRD_m/s_3000_m
+- VGRD_m/s_3250_m
+- VGRD_m/s_3500_m
+- VGRD_m/s_3750_m
+- VGRD_m/s_4000_m
+- VGRD_m/s_4250_m
+- VGRD_m/s_4500_m
+- VGRD_m/s_4750_m
+- VGRD_m/s_5000_m
+asos_path: /glade/p/cisl/aiml/ai2es/winter_ptypes/precip_rap/ASOS_mixture/
+callbacks:
+  CSVLogger:
+    append: 0
+    filename: training_log.csv
+    separator: ','
+  EarlyStopping:
+    mode: max
+    monitor: val_ave_acc
+    patience: 9
+    restore_best_weights: 1
+    verbose: 0
+  ReduceLROnPlateau:
+    factor: 0.1
+    min_lr: 1.0e-15
+    mode: max
+    monitor: val_ave_acc
+    patience: 3
+    verbose: 0
+case_studies:
+  dec_ice_storm:
+  - '2016-12-15'
+  - '2016-12-16'
+  - '2016-12-17'
+  - '2016-12-18'
+  - '2016-12-19'
+  - '2016-12-20'
+  ne_noreaster:
+  - '2017-03-11'
+  - '2017-03-12'
+  - '2017-03-13'
+  - '2017-03-14'
+  - '2017-03-15'
+  - '2017-03-16'
+  - '2017-03-17'
+  new_york:
+  - '2022-02-03'
+  - '2022-02-04'
+  texas:
+  - '2021-02-10'
+  - '2021-02-11'
+  - '2021-02-12'
+  - '2021-02-13'
+  - '2021-02-14'
+  - '2021-02-15'
+  - '2021-02-16'
+  - '2021-02-17'
+  - '2021-02-18'
+  - '2021-02-19'
+data_path: /glade/p/cisl/aiml/ai2es/winter_ptypes/ptype_qc/mPING_interpolated_QC2.parquet
+direction: max
+ensemble:
+  mc_steps: 0
+  n_splits: 10
+metric: val_ave_acc
+model:
+  activation: leaky
+  annealing_coeff: 34.593686950910275
+  balanced_classes: 1
+  batch_size: 100
+  dropout_alpha: 0.20146936081973893
+  epochs: 1000
+  hidden_layers: 2
+  hidden_neurons: 6461
+  loss: dirichlet
+  loss_weights:
+  - 58.64242174310205
+  - 94.59680461256323
+  - 124.5896569779261
+  - 227.38800030539545
+  lr: 0.0027750619126744817
+  optimizer: adam
+  output_activation: linear
+  use_dropout: 1
+  verbose: 0
+mping_path: /glade/p/cisl/aiml/ai2es/winter_ptypes/precip_rap/mPING_mixture/
+ptypes:
+- ra_percent
+- sn_percent
+- pl_percent
+- fzra_percent
+qc: '3.0'
+save_loc: /glade/scratch/schreck/repos/evidential/results/ptype/weighted/production/evidential
+scale_groups:
+- TEMP_C
+- T_DEWPOINT_C
+- UGRD_m/s
+- VGRD_m/s
+scaler_type: robust
+seed: 1000
+test_cutoff: '2020-07-01'
+train_size1: 0.9
+train_size2: 0.0
+verbose: 0
+pbs:
+  account: NAML0001
+  env_setup: "source ~/.bashrc \nmodule unload cuda cudnn \nconda activate evidential\n\
+    CUDNN_PATH=$(dirname $(python -c \"import nvidia.cudnn;print(nvidia.cudnn.__file__)\"\
+    ))\nexport LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$CONDA_PREFIX/lib/:$CUDNN_PATH/lib\n\
+    export XLA_FLAGS=--xla_gpu_cuda_data_dir=$CONDA_PREFIX"
+  gpu_type: v100
+  mem: 128GB
+  name: ptype-ev
+  ncpus: 8
+  ngpus: 1
+  queue: casper
+  select: 1
+  walltime: 43200
