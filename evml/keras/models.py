@@ -1087,11 +1087,14 @@ class CategoricalDNN(object):
         logging.info(
             f"Loading a CategoricalDNN with pre-trained weights from path {weights}"
         )
-
-        input_features = (
-            conf["TEMP_C"] + conf["T_DEWPOINT_C"] + conf["UGRD_m/s"] + conf["VGRD_m/s"]
-        )
-        output_features = conf["ptypes"]
+        input_features = conf["input_features"]
+        output_features = conf["output_features"]
+        
+        # flag for our ptype model
+        if all([x in conf for x in input_features]):
+            input_features = [conf[x] for x in input_features]
+            input_features = [item for sublist in input_features for item in sublist]
+        
         model_class = cls(**conf["model"])
         model_class.build_neural_network(len(input_features), len(output_features))
         model_class.model.load_weights(weights)

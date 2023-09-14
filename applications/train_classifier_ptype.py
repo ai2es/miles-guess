@@ -81,10 +81,10 @@ class Objective(BaseObjective):
 
 
 def trainer(conf, evaluate=True, data_split=0, mc_forward_passes=0):
-    input_features = (
-        conf["TEMP_C"] + conf["T_DEWPOINT_C"] + conf["UGRD_m/s"] + conf["VGRD_m/s"]
-    )
-    output_features = conf["ptypes"]
+    input_features = []
+    for features in conf["input_features"]:
+        input_features += conf[features]
+    output_features = conf["output_features"]
     metric = conf["metric"]
     # flag for using the evidential model
     if conf["model"]["loss"] == "dirichlet":

@@ -140,6 +140,11 @@ direction: max
 ensemble:
   mc_steps: 100
   n_splits: 10
+input_features:
+- TEMP_C
+- T_DEWPOINT_C
+- UGRD_m/s
+- VGRD_m/s
 metric: val_ave_acc
 model:
   activation: leaky
@@ -162,6 +167,11 @@ model:
   use_dropout: 1
   verbose: 0
 mping_path: /glade/p/cisl/aiml/ai2es/winter_ptypes/precip_rap/mPING_mixture/
+output_features:
+- ra_percent
+- sn_percent
+- pl_percent
+- fzra_percent
 pbs:
   account: NAML0001
   env_setup: "source ~/.bashrc \nmodule unload cuda cudnn \nconda activate evidential\n\
@@ -176,11 +186,6 @@ pbs:
   queue: casper
   select: 1
   walltime: 43200
-ptypes:
-- ra_percent
-- sn_percent
-- pl_percent
-- fzra_percent
 qc: '3.0'
 save_loc: /glade/scratch/schreck/repos/evidential/results/ptype/weighted/production/classifier
 scale_groups:
