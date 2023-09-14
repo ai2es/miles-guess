@@ -262,7 +262,7 @@ def trainer(conf, trial=False, mode="single"):
                     os.symlink(fn1, fn2)
 
             # evaluate on the test holdout split
-            if mode == "data" and monte_carlo_passes > 0:
+            if mode == "cv_ensemble" and monte_carlo_passes > 0:
                 # elif monte_carlo_passes > 0:  # mode = seed or single
                 # Create ensemble from MC dropout
                 dropout_mu = model.predict_monte_carlo(
@@ -288,7 +288,7 @@ def trainer(conf, trial=False, mode="single"):
             tf.keras.backend.clear_session()
             gc.collect()
 
-        if mode == "ensemble":
+        if mode == "multi_ensemble":
             # Compute uncertainties for the data ensemble
             ensemble_mu[model_seed] = np.mean(_ensemble_pred, 0)
             ensemble_var[model_seed] = np.var(_ensemble_pred, 0)
@@ -302,7 +302,7 @@ def trainer(conf, trial=False, mode="single"):
                 #if k in results_dict:
                 #    results_dict[k].append(v)
 
-        elif mode == "seed" and monte_carlo_passes > 0:
+        elif mode == "deep_ensemble" and monte_carlo_passes > 0:
             # elif monte_carlo_passes > 0:  # mode = seed or single
             # Create ensemble from MC dropout
             dropout_mu = best_model.predict_monte_carlo(
@@ -347,7 +347,7 @@ def trainer(conf, trial=False, mode="single"):
         return 1.0
 
     # We only created ensemble over model or seed but not both and no MC dropout
-    if mode in ["model", "seed"]:
+    if mode in ["cv_ensemble", "deep_ensemble"]:
         if n_splits == 1:
             mu = np.mean(_ensemble_pred_deep, 0)
             var = np.var(_ensemble_pred_deep, 0)
@@ -443,20 +443,20 @@ if __name__ == "__main__":
     save_loc = conf["save_loc"]
     os.makedirs(save_loc, exist_ok=True)
 
-    # Load the "ensemble" details fron the config
+    # Load the "multi_ensemble" details fron the config
     n_models = conf["ensemble"]["n_models"]
     n_splits = conf["ensemble"]["n_splits"]
     monte_carlo_passes = conf["ensemble"]["monte_carlo_passes"]
 
     # How is this script supposed to run?
     if n_splits > 1 and n_models == 1:
-        mode = "data"
+        mode = "cv_ensemble"
     elif n_splits == 1 and n_models > 1:
-        mode = "seed"
+        mode = "deep_ensemble"
     elif n_splits == 1 and n_models == 1:
         mode = "single"
     elif n_splits > 1 and n_models > 1:
-        mode = "ensemble"
+        mode = "multi_ensemble"
     else:
         raise ValueError(
             "Incorrect selection of n_splits or n_models. Both must be at greater than or equal to 1."

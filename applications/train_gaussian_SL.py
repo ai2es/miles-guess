@@ -129,7 +129,7 @@ def trainer(conf, trial=False, mode="single"):
     splits = list(gsp.split(_train_data, groups=_train_data[split_col]))
 
     # Train ensemble of parametric models
-    if mode == "seed":
+    if mode == "deep_ensemble":
         ensemble_mu = np.zeros((n_models, _test_data.shape[0], len(output_cols)))
         ensemble_var = np.zeros((n_models, _test_data.shape[0], len(output_cols)))
     else:
@@ -137,7 +137,6 @@ def trainer(conf, trial=False, mode="single"):
         ensemble_var = np.zeros((n_splits, _test_data.shape[0], len(output_cols)))
 
     best_model = None
-    best_data_split = None
     best_model_score = 1e10 if direction == "min" else -1e10
     results_dict = defaultdict(list)
     
@@ -315,7 +314,7 @@ def trainer(conf, trial=False, mode="single"):
                 for k,v in test_metrics.items():
                     results_dict[k].append(v)
 
-                if mode == "seed":
+                if mode == "deep_ensemble":
                     ensemble_mu[model_seed] = mu
                     ensemble_var[model_seed] = var
                 else:
@@ -370,7 +369,7 @@ def trainer(conf, trial=False, mode="single"):
         np.save(os.path.join(save_loc, f"{mode}/evaluate/test_sigma.npy"), ensemble_var)
 
         # make some figures
-        title = "Model seed ensemble" if mode == "seed" else "Cross validation ensemble"
+        title = "Model seed ensemble" if mode == "deep_ensemble" else "Cross validation ensemble"
         compute_results(
             _test_data,
             output_cols,
@@ -501,9 +500,9 @@ if __name__ == "__main__":
     monte_carlo_passes = conf["ensemble"]["monte_carlo_passes"]
     modes = []
     if n_splits > 1 and n_models == 1:
-        mode = "data"
+        mode = "cv_ensemble"
     elif n_splits == 1 and n_models > 1:
-        mode = "seed"
+        mode = "deep_ensemble"
     elif n_splits == 1 and n_models == 1:
         mode = "single"
     else:
