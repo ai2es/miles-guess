@@ -260,6 +260,9 @@ class BaseRegressor(object):
         
     @classmethod
     def load_model(cls, conf):
+        """
+        Load a trained model using args from a configuration
+        """
         # Check if weights file exists
         weights = os.path.join(conf["model"]["save_path"], "best.h5")
         if not os.path.isfile(weights):
@@ -278,6 +281,7 @@ class BaseRegressor(object):
         return model_class
     
     def mae(self, y_true, y_pred):
+        """ Compute the MAE """
         num_splits = y_pred.shape[-1]
         if num_splits == 4:
             mu, _, _, _ = tf.split(y_pred, num_splits, axis=-1) 
@@ -288,6 +292,7 @@ class BaseRegressor(object):
         return tf.keras.metrics.mean_absolute_error(y_true, mu)
     
     def mse(self, y_true, y_pred):
+        """ Compute the MSE """
         num_splits = y_pred.shape[-1]
         if num_splits == 4:
             mu, _, _, _ = tf.split(y_pred, num_splits, axis=-1)
@@ -320,6 +325,20 @@ class BaseRegressor(object):
         return y_out
     
     def predict_ensemble(self, x, weight_locations, batch_size=None, scaler=None, num_outputs=1):
+        """
+        Predicts outcomes using an ensemble of trained Keras models.
+
+        Args:
+            x (numpy.ndarray): Input data for predictions.
+            weight_locations (list of str): List containing paths to saved Keras model weights.
+            batch_size (int, optional): Batch size for inference. Default is None.
+            scaler (object, optional): Scaler object for preprocessing input data. Default is None.
+            num_outputs (int, optional): Number of output predictions. Default is 1.
+
+        Returns:
+            numpy.ndarray: Ensemble predictions for the input data.
+        """
+        
         num_models = len(weight_locations)
 
         # Initialize output_shape based on the first model's prediction
