@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mlguess"
+authors = [{name = "John Schreck, David John Gagne, Charlie Becker, Gabrielle Gantos", email = "miles@ucar.edu"}]
+readme = "README.md"
+license = {file = "LICENSE"}
+dynamic = ["version"]
+requires-python = ">=3.8"
+dependencies = [
+    "numpy<1.24",
+    "scipy",
+    "matplotlib",
+    "pandas",
+    "xarray",
+    "tensorflow",
+    "tensorflow_addons",
+    "scikit-learn",
+    "netcdf4",
+    "pyyaml",
+    "tqdm",
+    "sphinx",
+    "numba",
+    "properscoring",
+    "pyarrow",
+    "imbalanced-learn",
+    "bridgescaler",
+    "echo-opt",
+    "hagelslag",
+    "jupyter"
+    ]
+
+[tool.setuptools]
+packages = ["evml", "evml.keras", "evml.torch"]
+
+[tool.setuptools.dynamic]
+version = {file = "evml/VERSION"}
+readme = {file = ["README.md"]}

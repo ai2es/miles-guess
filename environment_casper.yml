@@ -11,11 +11,9 @@ dependencies:
   - matplotlib
   - xarray
   - netcdf4
-  - dask
   - pandas
   - pyyaml
   - pytest
-  - distributed
   - pip
   - pyproj
   - jupyter
@@ -24,15 +22,14 @@ dependencies:
   - tqdm
   - sphinx
   - numba
-  - cython
+  - imbalanced-learn
+  - pyarrow
+  - properscoring
   - pip:
     - nvidia-cudnn-cu11==8.6.0.163
     - tensorflow==2.12.*
-    - pyarrow
-    - fastparquet
-    - imblearn
     - echo-opt
     - hagelslag
-    - git+https://github.com/NCAR/bridgescaler
+    - bridgescaler
     - git+https://github.com/ai2es/ptype-physical.git@schreck
     - .
