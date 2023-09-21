@@ -51,7 +51,7 @@ direction: max
 ensemble:
   monte_carlo_passes: 100
   n_models: 1
-  n_splits: 20
+  n_splits: 2
 model:
   activation: relu
   batch_size: 3313

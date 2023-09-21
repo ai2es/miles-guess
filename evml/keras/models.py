@@ -191,7 +191,6 @@ class BaseRegressor(object):
             run_eagerly=False,
         )
 
-
     def fit(
         self,
         x,
@@ -254,7 +253,7 @@ class BaseRegressor(object):
         
         # Save the training variances
         np.savetxt(
-            os.path.join(self.save_path, f'{self.model_name.strip(".h5")}_training_var.txt'),
+            os.path.join(self.save_path, self.model_name.replace(".h5", "_training_var.txt")),
             np.array(self.training_var),
         )
         
@@ -278,6 +277,32 @@ class BaseRegressor(object):
             len(conf["data"]["input_cols"]), len(conf["data"]["output_cols"])
         )
         model_class.model.load_weights(weights)
+        
+        # Load ensemble weights
+        save_loc = conf["save_loc"]
+        n_models = conf["ensemble"]["n_models"]
+        n_splits = conf["ensemble"]["n_splits"]
+        if n_splits > 1 and n_models == 1:
+            mode = "cv_ensemble"
+        elif n_splits == 1 and n_models > 1:
+            mode = "deep_ensemble"
+        elif n_splits == 1 and n_models == 1:
+            mode = "single"
+        elif n_splits > 1 and n_models > 1:
+            mode = "multi_ensemble"
+        else:
+            raise ValueError(
+                "Incorrect selection of n_splits or n_models. Both must be at greater than or equal to 1."
+            )
+            
+        model_class.ensemble_weights = []
+        if mode != "single":
+            for i in range(n_models):
+                for j in range(n_splits):
+                    model_class.ensemble_weights.append(
+                        os.path.join(save_loc, mode, "models", f"model_seed{i}_split{j}.h5")
+                    )
+            
         return model_class
     
     def mae(self, y_true, y_pred):
@@ -324,13 +349,12 @@ class BaseRegressor(object):
             y_out = scaler.inverse_transform(y_out)
         return y_out
     
-    def predict_ensemble(self, x, weight_locations, batch_size=None, scaler=None, num_outputs=1):
+    def predict_ensemble(self, x, batch_size=None, scaler=None, num_outputs=1):
         """
         Predicts outcomes using an ensemble of trained Keras models.
 
         Args:
             x (numpy.ndarray): Input data for predictions.
-            weight_locations (list of str): List containing paths to saved Keras model weights.
             batch_size (int, optional): Batch size for inference. Default is None.
             scaler (object, optional): Scaler object for preprocessing input data. Default is None.
             num_outputs (int, optional): Number of output predictions. Default is 1.
@@ -338,13 +362,21 @@ class BaseRegressor(object):
         Returns:
             numpy.ndarray: Ensemble predictions for the input data.
         """
-        
-        num_models = len(weight_locations)
+        #if not hasattr(self, "ensemble_weights"):
+        #    raise ValueError("Please run YourModel.load_model(conf) to initiate loading of the trained ensemble weights")
+            
+        num_models = len(self.ensemble_weights)
 
         # Initialize output_shape based on the first model's prediction
         if num_models > 0:
             first_model = self.model
-            first_model.load_weights(weight_locations[0])
+            first_model.load_weights(self.ensemble_weights[0])
+            first_model.training_var = np.loadtxt(
+                self.ensemble_weights[0].replace(".h5", "_training_var.txt")
+            )
+            if not isinstance(first_model.training_var, list):
+                first_model.training_var = [first_model.training_var]
+            
             if num_outputs == 1:
                 mu = self.predict(x, batch_size=batch_size, scaler=scaler)
             elif num_outputs == 2:
@@ -370,9 +402,14 @@ class BaseRegressor(object):
                 ensemble_epi = np.empty((num_models,) + (x.shape[0],) + output_shape)
 
         # Predict for the remaining models
-        for i, weight_location in enumerate(weight_locations[1:]):
+        for i, weight_location in enumerate(self.ensemble_weights[1:]):
             model_instance = self.model
             model_instance.load_weights(weight_location)
+            model_instance.training_var = np.loadtxt(
+                weight_location.replace(".h5", "_training_var.txt")
+            )
+            if not isinstance(model_instance.training_var, list):
+                model_instance.training_var = [model_instance.training_var]
             
             if num_outputs == 1:
                 mu = self.predict(x, batch_size=batch_size, scaler=scaler)
@@ -595,12 +632,14 @@ class GaussianRegressorDNN(BaseRegressor):
     
     @classmethod
     def load_model(cls, conf):
+        # Load ensemble weights
+        save_loc = conf["save_loc"]
         n_models = conf["ensemble"]["n_models"]
         n_splits = conf["ensemble"]["n_splits"]
         if n_splits > 1 and n_models == 1:
-            mode = "data"
+            mode = "cv_ensemble"
         elif n_splits == 1 and n_models > 1:
-            mode = "seed"
+            mode = "deep_ensemble"
         elif n_splits == 1 and n_models == 1:
             mode = "single"
         else:
@@ -626,10 +665,19 @@ class GaussianRegressorDNN(BaseRegressor):
 
         # Load the variances
         model_class.training_var = np.loadtxt(
-            os.path.join(os.path.join(save_loc, f"{mode}/models", "training_var.txt"))
+            os.path.join(os.path.join(save_loc, f"{mode}/models", "best_training_var.txt"))
         )
         if not isinstance(model_class.training_var, list):
             model_class.training_var = [model_class.training_var]
+            
+        # Load ensemble weights
+        model_class.ensemble_weights = []
+        if mode != "single":
+            for i in range(n_models):
+                for j in range(n_splits):
+                    model_class.ensemble_weights.append(
+                        os.path.join(save_loc, mode, "models", f"model_seed{i}_split{j}.h5")
+                    )
 
         return model_class
     
@@ -662,9 +710,9 @@ class GaussianRegressorDNN(BaseRegressor):
         return mu, var
     
     def predict_ensemble(
-        self, x_test, y_test, scaler=None, batch_size=None
+        self, x_test, scaler=None, batch_size=None
     ):
-        return super().predict_ensemble(x_test, y_test, scaler=scaler, batch_size=batch_size, num_outputs=2)
+        return super().predict_ensemble(x_test, scaler=scaler, batch_size=batch_size, num_outputs=2)
     
     def predict_monte_carlo(
         self, x_test, y_test, forward_passes, scaler=None, batch_size=None
@@ -788,7 +836,7 @@ class EvidentialRegressorDNN(BaseRegressor):
     @classmethod
     def load_model(cls, conf):
         # Check if weights file exists
-        weights = os.path.join(conf["model"]["save_path"], "best.h5")
+        weights = os.path.join(conf["model"]["save_path"], "models", "best.h5")
         if not os.path.isfile(weights):
             raise ValueError(
                 f"No saved model exists at {weights}. You must train a model first. Exiting."
@@ -805,11 +853,29 @@ class EvidentialRegressorDNN(BaseRegressor):
 
         # Load the variances
         model_class.training_var = np.loadtxt(
-            os.path.join(os.path.join(conf["model"]["save_path"], "best_training_var.txt"))
+            os.path.join(os.path.join(conf["model"]["save_path"], "models", "best_training_var.txt"))
         )
         
         if not model_class.training_var.shape:
             model_class.training_var = np.array([model_class.training_var])
+            
+        # Load ensemble if there is one
+        save_loc = conf["save_loc"]
+        n_models = conf["ensemble"]["n_models"]
+        n_splits = conf["ensemble"]["n_splits"]
+        if n_splits > 1 and n_models == 1:
+            mode = "cv_ensemble"
+        elif n_splits == 1 and n_models > 1:
+            mode = "deep_ensemble"
+        elif n_splits == 1 and n_models == 1:
+            mode = "single"
+        model_class.ensemble_weights = []
+        if mode != "single":
+            for i in range(n_models):
+                for j in range(n_splits):
+                    model_class.ensemble_weights.append(
+                        os.path.join(save_loc, "models", f"model_seed{i}_split{j}.h5")
+                    )
 
         return model_class
 
@@ -862,9 +928,9 @@ class EvidentialRegressorDNN(BaseRegressor):
         return mu, v, alpha, beta
     
     def predict_ensemble(
-        self, x_test, y_test, scaler=None, batch_size=None
+        self, x_test, scaler=None, batch_size=None
     ):
-        return super().predict_ensemble(x_test, y_test, scaler=scaler, batch_size=batch_size, num_outputs=3)
+        return super().predict_ensemble(x_test, scaler=scaler, batch_size=batch_size, num_outputs=3)
     
     def predict_monte_carlo(
         self, x_test, y_test, forward_passes, scaler=None, batch_size=None
@@ -1206,7 +1272,7 @@ def locate_best_model(filepath, metric="val_ave_acc", direction="max"):
     scores = defaultdict(list)
     for filename in filepath:
         f = pd.read_csv(filename)
-        best_ensemble = int(filename.split("_log_")[1].strip(".csv"))
+        best_ensemble = int(filename.split("_log_")[1].replace(".csv", ""))
         scores["best_ensemble"].append(best_ensemble)
         scores["metric"].append(func(f[metric]))
 

@@ -195,7 +195,7 @@ def trainer(conf, trial=False):
         ########## 
 
         # Save model weights
-        model.model_name = f"model_split{data_seed}.h5"
+        model.model_name = f"models/model_split{data_seed}.h5"
         model.save_model()
 
         if conf["ensemble"]["n_splits"] > 1 or conf["ensemble"]["n_models"] > 1:
