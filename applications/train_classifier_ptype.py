@@ -15,10 +15,15 @@ import pandas as pd
 from tensorflow.keras import backend as K
 from argparse import ArgumentParser
 
-from ptype.callbacks import MetricsCallback
-from ptype.data import load_ptype_uq, preprocess_data
-from sklearn.model_selection import GroupShuffleSplit
+try:
+    from ptype.callbacks import MetricsCallback
+except ImportError:
+    import subprocess
+    subprocess.run(['pip', 'install', 'git+https://github.com/ai2es/ptype-physical.git'], check=True)
+    from ptype.callbacks import MetricsCallback
+    from ptype.data import load_ptype_uq, preprocess_data
 
+from sklearn.model_selection import GroupShuffleSplit
 from evml.keras.callbacks import get_callbacks, ReportEpoch
 from evml.keras.models import CategoricalDNN
 from evml.pbs import launch_pbs_jobs
