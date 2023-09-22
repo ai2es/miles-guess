@@ -6,9 +6,9 @@ import unittest
 import pandas as pd
 from sklearn.model_selection import GroupShuffleSplit
 from sklearn.preprocessing import RobustScaler, MinMaxScaler
-from evml.keras.models import BaseRegressor as RegressorDNN
-from evml.keras.models import GaussianRegressorDNN
-from evml.keras.models import EvidentialRegressorDNN
+from mlguess.keras.models import BaseRegressor as RegressorDNN
+from mlguess.keras.models import GaussianRegressorDNN
+from mlguess.keras.models import EvidentialRegressorDNN
 
 class TestModels(unittest.TestCase):
     def setUp(self):
@@ -83,7 +83,7 @@ class TestModels(unittest.TestCase):
         # Instantiate and build the EvidentialRegressorDNN model
         evidential_model = EvidentialRegressorDNN(**self.evidential_conf["model"])
         evidential_model.build_neural_network(x_train.shape[-1], y_train.shape[-1])
-
+        assert evidential_model.model.output.shape[1] == 4
         # Test the EvidentialRegressorDNN model here...
         # Example: evidential_model.fit(...) and assertions
 

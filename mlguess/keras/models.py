@@ -8,10 +8,10 @@ from tensorflow.keras import Input, Model
 from tensorflow.keras.regularizers import L1, L2, L1L2
 from tensorflow.keras.layers import Dense, LeakyReLU, GaussianNoise, Dropout
 from tensorflow.keras.optimizers import Adam, SGD
-from evml.keras.layers import DenseNormalGamma, DenseNormal
-from evml.keras.losses import EvidentialRegressionLoss, EvidentialRegressionCoupledLoss, GaussianNLL
-from evml.keras.losses import DirichletEvidentialLoss
-from evml.keras.callbacks import ReportEpoch
+from mlguess.keras.layers import DenseNormalGamma, DenseNormal
+from mlguess.keras.losses import EvidentialRegressionLoss, EvidentialRegressionCoupledLoss, GaussianNLL
+from mlguess.keras.losses import DirichletEvidentialLoss
+from mlguess.keras.callbacks import ReportEpoch
 from imblearn.under_sampling import RandomUnderSampler
 from imblearn.tensorflow import balanced_batch_generator
 from collections import defaultdict

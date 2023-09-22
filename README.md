@@ -1,7 +1,7 @@
 # MILES-Guess
 Generalized Uncertainty for Earth System Science (GUESS)
 
-Presented by the Machine Ingetration and Learning in the Earth System (MILES) group at the National Center for Atmospheric Research (NCAR), Boulder CO, USA
+Developed by the Machine Ingetration and Learning for Earth Systems (MILES) group at the National Center for Atmospheric Research (NCAR), Boulder CO, USA
 
 ## Contributers 
 * John Schreck
@@ -25,13 +25,13 @@ Presented by the Machine Ingetration and Learning in the Earth System (MILES) gr
 
 `conda env create -f environment.yml`
 
-`conda activate evidential`
+`conda activate guess`
 
 * Create a conda environment for Casper/Derecho users including Tensorflow 2.12 with GPU support:
 
 `conda env create -f environment_casper.yml`
 
-`conda activate evidential`
+`conda activate guess`
 
 `wget https://github.com/NCAR/casper_tensorflow_gpu/blob/0e154b1c75bce611638daa8219ab2b866367bb72/activate_env_vars.sh`
 
@@ -45,13 +45,13 @@ Presented by the Machine Ingetration and Learning in the Earth System (MILES) gr
 
 `cp activate_env_vars.sh $CONDA_PREFIX/etc/conda/activate.d/env_vars.sh`
 
-## Using ev-ml
+## Using miles-guess
 
 The package contains three scripts for training three regression models, and one for training categorical models. The regression examples are trained on our surface layer ("SL") dataset for predicting latent heat and other quantities, and the categorical example is trained on a precipitation dataset ("p-type").
 
 The law of total variance for each model prediction target may be computed as 
 
-LoTV = E[$\sigma^2$] + Var[$\mu$] 
+$$LoTV = E[\sigma^2] + Var[\mu]$$ 
 
 which is the sum of aleatoric and epistemic contributions, respectively. 
 
@@ -265,6 +265,6 @@ Callbacks are not required in regression training, however a custom callback whi
 Depending on the problem, a data field is customized and also present in the configuration files. See the examples for surface layer and p-type data sets for more details. 
 
 
-## ECHO optimization 
+## ECHO hyperparameter optimization 
 
 Configuration files are also supplied for use with the Earth Computing Hyperparameter Optimization (ECHO) package. See the echo package https://github.com/NCAR/echo-opt/tree/main/echo for more details on the configuration fields.

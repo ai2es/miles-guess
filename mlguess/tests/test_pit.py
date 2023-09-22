@@ -1,4 +1,4 @@
-from evml.pit import pit_histogram, pit_deviation
+from mlguess.pit import pit_histogram, pit_deviation
 import numpy as np
 from scipy.stats import norm
 

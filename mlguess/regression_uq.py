@@ -3,7 +3,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from collections import defaultdict
 import os
 from sklearn.metrics import brier_score_loss
-from evml.pit import pit_histogram
+from mlguess.pit import pit_histogram
 from matplotlib.colors import LogNorm
 import properscoring as ps 
 import pandas as pd

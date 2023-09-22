@@ -2,7 +2,7 @@ import sys
 import numpy as np
 import torch
 import torch.nn.functional as F
-from evml.torch.class_losses import relu_evidence
+from mlguess.torch.class_losses import relu_evidence
 
 
 def enable_dropout(model):
