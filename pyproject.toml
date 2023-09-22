@@ -33,8 +33,8 @@ dependencies = [
     ]
 
 [tool.setuptools]
-packages = ["evml", "evml.keras", "evml.torch"]
+packages = ["mlguess", "mlguess.keras", "mlguess.torch"]
 
 [tool.setuptools.dynamic]
-version = {file = "evml/VERSION"}
+version = {file = "mlguess/VERSION"}
 readme = {file = ["README.md"]}

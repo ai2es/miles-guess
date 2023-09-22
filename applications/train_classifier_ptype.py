@@ -24,9 +24,9 @@ except ImportError:
     from ptype.data import load_ptype_uq, preprocess_data
 
 from sklearn.model_selection import GroupShuffleSplit
-from evml.keras.callbacks import get_callbacks, ReportEpoch
-from evml.keras.models import CategoricalDNN
-from evml.pbs import launch_pbs_jobs
+from mlguess.keras.callbacks import get_callbacks, ReportEpoch
+from mlguess.keras.models import CategoricalDNN
+from mlguess.pbs import launch_pbs_jobs
 from bridgescaler import save_scaler
 
 

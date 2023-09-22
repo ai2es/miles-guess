@@ -17,15 +17,15 @@ import tensorflow as tf
 from argparse import ArgumentParser
 
 from tensorflow.keras import backend as K
-from evml.pit import pit_deviation_skill_score, pit_deviation
-from evml.keras.models import EvidentialRegressorDNN
-from evml.keras.callbacks import get_callbacks
-from evml.splitting import load_splitter
-from evml.regression_uq import compute_results
-from evml.preprocessing import load_preprocessing
-from evml.keras.seed import seed_everything
-from evml.regression_metrics import regression_metrics
-from evml.pbs import launch_pbs_jobs
+from mlguess.pit import pit_deviation_skill_score, pit_deviation
+from mlguess.keras.models import EvidentialRegressorDNN
+from mlguess.keras.callbacks import get_callbacks
+from mlguess.splitting import load_splitter
+from mlguess.regression_uq import compute_results
+from mlguess.preprocessing import load_preprocessing
+from mlguess.keras.seed import seed_everything
+from mlguess.regression_metrics import regression_metrics
+from mlguess.pbs import launch_pbs_jobs
 from bridgescaler import save_scaler
 
 

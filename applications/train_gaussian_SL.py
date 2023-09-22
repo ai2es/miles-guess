@@ -18,15 +18,15 @@ from collections import defaultdict
 from bridgescaler import save_scaler
 
 from keras import backend as K
-from evml.pit import pit_deviation_skill_score, pit_deviation
-from evml.keras.models import GaussianRegressorDNN
-from evml.keras.callbacks import get_callbacks
-from evml.splitting import load_splitter
-from evml.regression_uq import compute_results
-from evml.preprocessing import load_preprocessing
-from evml.keras.seed import seed_everything
-from evml.pbs import launch_pbs_jobs
-from evml.regression_metrics import regression_metrics
+from mlguess.pit import pit_deviation_skill_score, pit_deviation
+from mlguess.keras.models import GaussianRegressorDNN
+from mlguess.keras.callbacks import get_callbacks
+from mlguess.splitting import load_splitter
+from mlguess.regression_uq import compute_results
+from mlguess.preprocessing import load_preprocessing
+from mlguess.keras.seed import seed_everything
+from mlguess.pbs import launch_pbs_jobs
+from mlguess.regression_metrics import regression_metrics
 import traceback
 
 

@@ -19,7 +19,7 @@ from ptype.plotting import (
     plot_confusion_matrix,
     coverage_figures,
 )
-from evml.classifier_uq import uq_results
+from mlguess.classifier_uq import uq_results
 
 from hagelslag.evaluation.ProbabilityMetrics import DistributedROC
 from hagelslag.evaluation.MetricPlotter import roc_curve, performance_diagram

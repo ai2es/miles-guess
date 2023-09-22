@@ -1,4 +1,4 @@
-name: evidential
+name: guess
 channels:
   - conda-forge
 dependencies:

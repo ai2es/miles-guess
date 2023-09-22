@@ -2,7 +2,7 @@ from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 import numpy as np
 import pandas as pd
 import properscoring as ps
-from evml.pit import pit_deviation_skill_score
+from mlguess.pit import pit_deviation_skill_score
 
 
 
