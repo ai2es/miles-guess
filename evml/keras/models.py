@@ -90,9 +90,10 @@ class BaseRegressor(object):
         self.model = None
         self.optimizer_obj = None
         self.training_std = None
-        self.training_var = None
+        self.training_var = []
         self.metrics = metrics
         self.eps = eps
+        self.ensemble_member_files = []
 
     def build_neural_network(self, inputs, outputs, last_layer="Dense"):
         """
@@ -295,11 +296,11 @@ class BaseRegressor(object):
                 "Incorrect selection of n_splits or n_models. Both must be at greater than or equal to 1."
             )
             
-        model_class.ensemble_weights = []
+        model_class.ensemble_member_files = []
         if mode != "single":
             for i in range(n_models):
                 for j in range(n_splits):
-                    model_class.ensemble_weights.append(
+                    model_class.ensemble_member_files.append(
                         os.path.join(save_loc, mode, "models", f"model_seed{i}_split{j}.h5")
                     )
             
@@ -365,14 +366,14 @@ class BaseRegressor(object):
         #if not hasattr(self, "ensemble_weights"):
         #    raise ValueError("Please run YourModel.load_model(conf) to initiate loading of the trained ensemble weights")
             
-        num_models = len(self.ensemble_weights)
+        num_models = len(self.ensemble_member_files)
 
         # Initialize output_shape based on the first model's prediction
         if num_models > 0:
             first_model = self.model
-            first_model.load_weights(self.ensemble_weights[0])
+            first_model.load_weights(self.ensemble_member_files[0])
             first_model.training_var = np.loadtxt(
-                self.ensemble_weights[0].replace(".h5", "_training_var.txt")
+                self.ensemble_member_files[0].replace(".h5", "_training_var.txt")
             )
             if not isinstance(first_model.training_var, list):
                 first_model.training_var = [first_model.training_var]
@@ -402,7 +403,7 @@ class BaseRegressor(object):
                 ensemble_epi = np.empty((num_models,) + (x.shape[0],) + output_shape)
 
         # Predict for the remaining models
-        for i, weight_location in enumerate(self.ensemble_weights[1:]):
+        for i, weight_location in enumerate(self.ensemble_member_files[1:]):
             model_instance = self.model
             model_instance.load_weights(weight_location)
             model_instance.training_var = np.loadtxt(
@@ -620,7 +621,7 @@ class GaussianRegressorDNN(BaseRegressor):
         self.eps = eps
         self.loss = GaussianNLL
         
-    def build_neural_network(self, inputs, outputs):
+    def build_neural_network(self, inputs, outputs, last_layer="DenseNormal"):
         """
         Create Keras neural network model and compile it.
 
@@ -628,7 +629,7 @@ class GaussianRegressorDNN(BaseRegressor):
             inputs (int): Number of input predictor variables.
             outputs (int): Number of output predictor variables.
         """
-        super().build_neural_network(inputs, outputs, last_layer="DenseNormal")
+        super().build_neural_network(inputs, outputs, last_layer=last_layer)
     
     @classmethod
     def load_model(cls, conf):
@@ -671,11 +672,11 @@ class GaussianRegressorDNN(BaseRegressor):
             model_class.training_var = [model_class.training_var]
             
         # Load ensemble weights
-        model_class.ensemble_weights = []
+        model_class.ensemble_member_files = []
         if mode != "single":
             for i in range(n_models):
                 for j in range(n_splits):
-                    model_class.ensemble_weights.append(
+                    model_class.ensemble_member_files.append(
                         os.path.join(save_loc, mode, "models", f"model_seed{i}_split{j}.h5")
                     )
 
@@ -686,7 +687,7 @@ class GaussianRegressorDNN(BaseRegressor):
         if len(mu.shape) == 1:
             mu = np.expand_dims(mu, axis=0)
             aleatoric = np.expand_dims(aleatoric, axis=0)
-        if y_scaler:
+        if y_scaler is not None:
             mu = y_scaler.inverse_transform(mu)
         for i in range(aleatoric.shape[-1]):
             aleatoric[:, i] *= self.training_var[i]
@@ -709,15 +710,12 @@ class GaussianRegressorDNN(BaseRegressor):
 
         return mu, var
     
-    def predict_ensemble(
-        self, x_test, scaler=None, batch_size=None
-    ):
-        return super().predict_ensemble(x_test, scaler=scaler, batch_size=batch_size, num_outputs=2)
+    def predict_ensemble(self, x_test, scaler=None, batch_size=None, num_outputs=2):
+        return super().predict_ensemble(x_test, scaler=scaler, batch_size=batch_size, num_outputs=num_outputs)
     
-    def predict_monte_carlo(
-        self, x_test, y_test, forward_passes, scaler=None, batch_size=None
-    ):
-        return super().predict_monte_carlo(x_test, y_test, forward_passes, scaler=scaler, batch_size=batch_size, num_outputs=2)
+    def predict_monte_carlo(self, x_test, y_test, forward_passes, scaler=None, batch_size=None, num_outputs=2):
+        return super().predict_monte_carlo(x_test, y_test, forward_passes, scaler=scaler,
+                                           batch_size=batch_size, num_outputs=num_outputs)
 
     
 class EvidentialRegressorDNN(BaseRegressor):
@@ -869,11 +867,11 @@ class EvidentialRegressorDNN(BaseRegressor):
             mode = "deep_ensemble"
         elif n_splits == 1 and n_models == 1:
             mode = "single"
-        model_class.ensemble_weights = []
+        model_class.ensemble_member_files = []
         if mode != "single":
             for i in range(n_models):
                 for j in range(n_splits):
-                    model_class.ensemble_weights.append(
+                    model_class.ensemble_member_files.append(
                         os.path.join(save_loc, "models", f"model_seed{i}_split{j}.h5")
                     )
 
