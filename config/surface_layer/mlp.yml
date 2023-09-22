@@ -1,5 +1,5 @@
 seed: 1000
-save_loc: "/glade/work/schreck/repos/evidential/main/results/test"
+save_loc: "./"
 training_metric: "val_mae"
 direction: "min"
 
@@ -38,8 +38,8 @@ data:
     train_size: 0.9
 
 model:
-    hidden_layers: 2
-    hidden_neurons: 4368
+    hidden_layers: 1
+    hidden_neurons: 500
     activation: "relu"
     optimizer: "adam"
     metrics: "mae"

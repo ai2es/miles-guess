@@ -1,11 +1,12 @@
 seed: 1000
-save_loc: "/glade/work/schreck/repos/evidential/main/results/production/surface_layer/evidential_uniform"
+save_loc: "/glade/work/schreck/repos/evidential/main/results/test"
 training_metric: "val_mae"
 direction: "min"
 
 ensemble:
-    n_splits: 10
-    n_models: 1
+    n_models: 100
+    n_splits: 1
+    monte_carlo_passes: 100
 
 data:
     save_loc: "/glade/p/cisl/aiml/ai2es/surfacelayer/cabauw_derived_data_20210720.csv"
@@ -21,7 +22,6 @@ data:
         'kinematic_latent_heat_flux:surface:g_kg-1_m_s-1'
     ]
     splitter: "GroupShuffleSplit"
-    train_size: 0.9
     scaler_x:
         type: "quantile"
         params:
@@ -29,40 +29,39 @@ data:
             with_mean: true
             with_std: true
     scaler_y:
-        type: "normalize"
+        type: "symmetric"
         params:
             copy: true
             with_mean: true
             with_std: true
     split_col: "day"
+    train_size: 0.9
 
 model:
-    activation: relu
-    batch_size: 193
-    dropout_alpha: 0.2
-    epochs: 200
-    evidential_coef: 0.6654439861214466
-    hidden_layers: 3
-    hidden_neurons: 6088
-    kernel_reg: l2
+    hidden_layers: 2
+    hidden_neurons: 4368
+    activation: "relu"
+    optimizer: "adam"
+    metrics: "mae"
+    lr: 0.0004727390951751
+    kernel_reg: 'l2'
     l1_weight: 0.0
-    l2_weight: 7.908676527243475e-10
-    lr: 3.5779279071474884e-05
-    metrics: mae
-    optimizer: adam
-    uncertainties: true
-    use_dropout: true
-    use_noise: false
-    verbose: 2
-      
+    l2_weight: 3.811291842127919e-06
+    batch_size: 2981
+    use_noise: False
+    use_dropout: True
+    dropout_alpha: 0.2
+    epochs: 100
+    verbose: 0
+    
 callbacks:
   EarlyStopping:
-    monitor: "val_loss"
+    monitor: "val_mae"
     patience: 5
     mode: "min"
     verbose: 0
   ReduceLROnPlateau: 
-    monitor: "val_loss"
+    monitor: "val_mae"
     factor: 0.1
     patience: 2
     min_lr: 1.0e-12
@@ -74,15 +73,16 @@ callbacks:
     separator: ","
     append: False
   ModelCheckpoint:
-    filepath: "model.h5"
-    monitor: "val_loss"
-    save_weights: True
-    save_best_only: True
+    filepath: "tmp.h5"
+    monitor: "val_mae"
+    save_weights: False
+    save_best_only: False
+    restore_best_weights: True
     mode: "min"
     verbose: 0
     
 pbs:
-  name: ev-uniform
+  name: mlp-seed
   select: 1
   ncpus: 8
   ngpus: 1

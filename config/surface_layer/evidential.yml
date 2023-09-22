@@ -66,8 +66,7 @@ model:
   metrics: mae
   model_name: best.h5
   optimizer: adam
-  save_path: /glade/scratch/schreck/repos/evidential/results/surface_layer/production/data/friction_velocity/evidential
-  uncertainties: true
+  save_path: ./
   use_dropout: true
   use_noise: false
   verbose: 2
@@ -85,6 +84,6 @@ pbs:
   queue: casper
   select: 1
   walltime: 43200
-save_loc: /glade/scratch/schreck/repos/evidential/results/surface_layer/production/data/friction_velocity/evidential
+save_loc: ./
 seed: 1000
 training_metric: val_pitd

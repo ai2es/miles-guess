@@ -26,6 +26,7 @@ from evml.regression_uq import compute_results
 from evml.preprocessing import load_preprocessing
 from evml.keras.seed import seed_everything
 from evml.pbs import launch_pbs_jobs
+from evml.regression_metrics import regression_metrics
 import traceback
 
 
@@ -128,7 +129,7 @@ def trainer(conf, trial=False, mode="single"):
     splits = list(gsp.split(_train_data, groups=_train_data[split_col]))
 
     # Train ensemble of parametric models
-    if mode == "seed":
+    if mode == "deep_ensemble":
         ensemble_mu = np.zeros((n_models, _test_data.shape[0], len(output_cols)))
         ensemble_var = np.zeros((n_models, _test_data.shape[0], len(output_cols)))
     else:
@@ -136,9 +137,9 @@ def trainer(conf, trial=False, mode="single"):
         ensemble_var = np.zeros((n_splits, _test_data.shape[0], len(output_cols)))
 
     best_model = None
-    best_data_split = None
     best_model_score = 1e10 if direction == "min" else -1e10
-
+    results_dict = defaultdict(list)
+    
     for model_seed in range(n_models):
 
         # Make N train-valid splits using day as grouping variable
@@ -187,7 +188,7 @@ def trainer(conf, trial=False, mode="single"):
                 y_test = y_scaler.transform(test_data[output_cols])
             else:
                 y_train = train_data[output_cols].values
-                y_valid = valid_data[output_cols].values
+                y_valid = valid_data[output_cols].values 
                 y_test = test_data[output_cols].values
 
             # Copy / initialize model
@@ -205,82 +206,124 @@ def trainer(conf, trial=False, mode="single"):
                 callbacks=get_callbacks(conf, path_extend=f"{mode}/models"),
             )
             history = model.model.history
+            
+            ####################
+            #
+            # VALIDATE THE MODEL
+            #
+            ####################
 
-            # Get the value of the metric
-            if "pit" in training_metric:
-                pitd = []
-                y_pred = model.predict(x_valid)
-                mu, var = model.calc_uncertainties(y_pred, y_scaler)
-                for i, col in enumerate(output_cols):
-                    pitd.append(
-                        pit_deviation(
-                            y_valid[:, i],
-                            np.stack([mu[:, i], np.sqrt(var[:, i])], -1),
-                            pred_type="gaussian",
-                        )
-                    )
-                optimization_metric = np.mean(pitd)
-            elif direction == "min":
-                optimization_metric = min(history.history[training_metric])
-            elif direction == "max":
-                optimization_metric = max(history.history[training_metric])
+            # Compute metrics on validation set 
+            mu, ale = model.predict_uncertainty(x_valid)
+            total = np.sqrt(ale)
+            val_metrics = regression_metrics(y_scaler.inverse_transform(y_valid), mu, total)
+            for k, v in val_metrics.items():
+                results_dict[k].append(v)
+            optimization_metric = val_metrics[training_metric]
 
             # If ECHO is running this script, n_splits has been set to 1, return the metric here
             if trial is not False and conf["ensemble"]["monte_carlo_passes"] == 0:
-                return {
-                    training_metric: optimization_metric,
-                    "val_mae": min(history.history["val_mae"]),
-                }
+                for metric in ["val_r2", "val_rmse_ss", "val_crps_ss"]:
+                    if val_metrics[metric] < 0.0:  # ECHO maxing out negative numbers? Not sure why ... 
+                        val_metrics[metric] = 0.0
+                return val_metrics
 
             # Write to the logger
             logger.info(
                 f"Finished model/data split {model_seed}/{data_seed} with metric {training_metric} = {optimization_metric}"
             )
+            
+            ##########
+            #
+            # SAVE MODEL
+            #
+            ########## 
+            
+            # Save model weights
+            model.model_name = f"model_seed{model_seed}_split{data_seed}.h5"
+            model.save_model()
+            
+            if conf["ensemble"]["n_splits"] > 1 or conf["ensemble"]["n_models"] > 1:
+                pd_history = pd.DataFrame.from_dict(history.history)
+                pd_history["data_split"] = data_seed
+                pd_history["model_split"] = model_seed
+                pd_history.to_csv(
+                    os.path.join(conf["save_loc"], mode, "models", f"training_log_seed{model_seed}_split{data_seed}.csv")
+                )
+            
+            # Save scalers
+            for scaler_name, scaler in zip(
+                ["input", "output"], [x_scaler, y_scaler]
+            ):
+                fn = os.path.join(
+                    save_loc, f"{mode}/scalers", f"{scaler_name}_seed{model_seed}_split{data_seed}.json"
+                )
+                try:
+                    save_scaler(scaler, fn)
+                except TypeError:
+                    with open(fn, "wb") as fid:
+                        pickle.dump(scaler, fid)
 
-            # Save if its the best model
+            # Symlink if its the best model
             c1 = (direction == "min") and (optimization_metric < best_model_score)
             c2 = (direction == "max") and (optimization_metric > best_model_score)
             if c1 | c2:
                 best_model = model
                 best_model_score = optimization_metric
-                best_data_split = data_seed
-                model.model_name = "best.h5"
-                model.save_model()
-
-                # Save scalers
-                for scaler_name, scaler in zip(
-                    ["input", "output"], [x_scaler, y_scaler]
-                ):
-                    fn = os.path.join(
-                        save_loc, f"{mode}/scalers", f"{scaler_name}.json"
+                
+                # Break the current symlink
+                if os.path.isfile(os.path.join(save_loc, mode, "models", "best.h5")):
+                    os.remove(os.path.join(save_loc, mode, "models", "best.h5"))
+                    os.remove(os.path.join(save_loc, mode, "models", "best_training_var.txt"))
+                
+                ensemble_name = f"model_seed{model_seed}_split{data_seed}"
+                os.symlink(
+                    os.path.join(save_loc, mode, "models", f"{ensemble_name}.h5"),
+                    os.path.join(save_loc, mode, "models", "best.h5"),
+                )
+                os.symlink(
+                    os.path.join(save_loc, mode, "models", f"{ensemble_name}_training_var.txt"),
+                    os.path.join(save_loc, mode, "models", "best_training_var.txt"),
+                )
+                #Save scalers
+                for scaler_name in ["input", "output"]:
+                    if os.path.isfile(os.path.join(save_loc, f"{mode}/scalers", f"best_{scaler_name}.json")):
+                        os.remove(os.path.join(save_loc, f"{mode}/scalers", f"best_{scaler_name}.json"))
+                    fn1 = os.path.join(
+                        save_loc, f"{mode}/scalers", f"{scaler_name}_seed{model_seed}_split{data_seed}.json"
                     )
-                    try:
-                        save_scaler(scaler, fn)
-                    except TypeError:
-                        with open(fn, "wb") as fid:
-                            pickle.dump(scaler, fid)
-
+                    fn2 = os.path.join(
+                        save_loc, f"{mode}/scalers", f"best_{scaler_name}.json"
+                    )
+                    os.symlink(fn1, fn2)
+                
             if trial is not False:
                 continue
+                
+            ################
+            #
+            # TEST THE MODEL
+            #
+            ################
 
             # Evaluate on the test holdout split
-            for split, x_split, df in zip(
-                ["test"], [x_test], [test_data]
-            ):
+            for split, x_split, df in zip(["test"], [x_test], [test_data]):
+                mu, var = model.predict_uncertainty(x_split, y_scaler)
+                total = np.sqrt(var)
+                test_metrics = regression_metrics(y_scaler.inverse_transform(y_test), mu, total, split="test")
+                for k,v in test_metrics.items():
+                    results_dict[k].append(v)
 
-                y_pred = model.predict(x_split)
-                mu, aleatoric = model.calc_uncertainties(y_pred, y_scaler)
-
-                if mode == "seed":
+                if mode == "deep_ensemble":
                     ensemble_mu[model_seed] = mu
-                    ensemble_var[model_seed] = aleatoric
+                    ensemble_var[model_seed] = var
                 else:
                     ensemble_mu[data_seed] = mu
-                    ensemble_var[data_seed] = aleatoric
+                    ensemble_var[data_seed] = var
 
                 # Save the ensemble member df
                 df[[f"{x}_pred" for x in output_cols]] = mu
-                df[[f"{x}_ale" for x in output_cols]] = aleatoric
+                df[[f"{x}_ale" for x in output_cols]] = var
                 df.to_csv(
                     os.path.join(
                         save_loc, f"{mode}/evaluate", f"{split}_{data_seed}.csv"
@@ -291,6 +334,10 @@ def trainer(conf, trial=False, mode="single"):
             del model
             tf.keras.backend.clear_session()
             gc.collect()
+    
+    # Save metrics
+    pd.DataFrame.from_dict(results_dict).to_csv(
+        os.path.join(save_loc, f"{mode}/evaluate/ensemble_metrics.csv"))
 
     # Evaluation and calculation of uncertainties
     if mode != "single" and trial is False:
@@ -304,6 +351,17 @@ def trainer(conf, trial=False, mode="single"):
         _test_data[[f"{x}_pred" for x in output_cols]] = ensemble_mean
         _test_data[[f"{x}_ale" for x in output_cols]] = ensemble_aleatoric
         _test_data[[f"{x}_epi" for x in output_cols]] = ensemble_epistemic
+        
+        # Compute metrics on the test split for the ensemble
+        best_metrics = {}
+        total = np.sqrt(ensemble_aleatoric + ensemble_epistemic)
+        for k, v in regression_metrics(y_scaler.inverse_transform(y_test), ensemble_mean, total, split="test").items():
+            best_metrics[k] = v
+        
+        pd.DataFrame.from_dict({
+            "metric": list(best_metrics.keys()),
+            "value": list(best_metrics.values())
+        }).to_csv(os.path.join(save_loc, f"{mode}/evaluate/best_metrics.csv"))
 
         # save
         _test_data.to_csv(os.path.join(save_loc, f"{mode}/evaluate/test.csv"))
@@ -311,7 +369,7 @@ def trainer(conf, trial=False, mode="single"):
         np.save(os.path.join(save_loc, f"{mode}/evaluate/test_sigma.npy"), ensemble_var)
 
         # make some figures
-        title = "Model seed ensemble" if mode == "seed" else "Cross validation ensemble"
+        title = "Model seed ensemble" if mode == "deep_ensemble" else "Cross validation ensemble"
         compute_results(
             _test_data,
             output_cols,
@@ -338,7 +396,7 @@ def trainer(conf, trial=False, mode="single"):
             x,
             y,
             forward_passes=monte_carlo_passes,
-            y_scaler=y_scaler,
+            scaler=y_scaler,
         )
 
         # Calculating mean across multiple MCD forward passes
@@ -349,21 +407,17 @@ def trainer(conf, trial=False, mode="single"):
         # Calculating variance across multiple MCD forward passes
         mc_epistemic = np.var(dropout_mu, axis=0)  # shape (n_samples, n_classes)
 
-        # Compute PITD
-        pitd_dict = defaultdict(list)
-        for i, col in enumerate(output_cols):
-            pitd_dict[col].append(
-                pit_deviation(
-                    y[:, i],
-                    np.stack(
-                        [mu[:, i], np.sqrt(mc_aleatoric[:, i] + mc_epistemic[:, i])], -1
-                    ),
-                    pred_type="gaussian",
-                )
-            )
+        # Compute metrics on the test split for the ensemble
+        best_metrics = {}
+        total = np.sqrt(mc_aleatoric + mc_epistemic)
+        for k, v in regression_metrics(y_scaler.inverse_transform(y), mc_mu, total, split="test").items():
+            best_metrics[k] = v
+        pd.DataFrame.from_dict({
+            "metric": list(best_metrics.keys()),
+            "value": list(best_metrics.values())
+        }).to_csv(os.path.join(save_loc, f"{mode}/evaluate/best_metrics.csv"))
 
         if trial is not False:
-            optimization_metric = np.mean([x[0] for x in pitd_dict.values()])
             return {
                 training_metric: optimization_metric,
                 "val_mae": min(history.history["val_mae"]),
@@ -380,10 +434,7 @@ def trainer(conf, trial=False, mode="single"):
             dropout_aleatoric,
         )
         _test_data.to_csv(os.path.join(save_loc, "monte_carlo/evaluate/test.csv"))
-        pd.DataFrame.from_dict(pitd_dict).to_csv(
-            os.path.join(save_loc, "monte_carlo/evaluate/pit.csv")
-        )
-
+    
         # Make some figures
         compute_results(
             _test_data,
@@ -449,9 +500,9 @@ if __name__ == "__main__":
     monte_carlo_passes = conf["ensemble"]["monte_carlo_passes"]
     modes = []
     if n_splits > 1 and n_models == 1:
-        mode = "data"
+        mode = "cv_ensemble"
     elif n_splits == 1 and n_models > 1:
-        mode = "seed"
+        mode = "deep_ensemble"
     elif n_splits == 1 and n_models == 1:
         mode = "single"
     else:

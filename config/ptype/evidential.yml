@@ -140,6 +140,11 @@ direction: max
 ensemble:
   mc_steps: 0
   n_splits: 10
+input_features:
+- TEMP_C
+- T_DEWPOINT_C
+- UGRD_m/s
+- VGRD_m/s
 metric: val_ave_acc
 model:
   activation: leaky
@@ -162,7 +167,7 @@ model:
   use_dropout: 1
   verbose: 0
 mping_path: /glade/p/cisl/aiml/ai2es/winter_ptypes/precip_rap/mPING_mixture/
-ptypes:
+output_features:
 - ra_percent
 - sn_percent
 - pl_percent

@@ -89,7 +89,7 @@ VGRD_m/s:
 asos_path: /glade/p/cisl/aiml/ai2es/winter_ptypes/precip_rap/ASOS_mixture/
 callbacks:
   CSVLogger:
-    append: 1
+    append: 0
     filename: training_log.csv
     separator: ','
   EarlyStopping:
@@ -135,43 +135,51 @@ case_studies:
   - '2021-02-17'
   - '2021-02-18'
   - '2021-02-19'
-data_path: "../data/ptype_sample.parquet"
+data_path: /glade/p/cisl/aiml/ai2es/winter_ptypes/ptype_qc/mPING_interpolated_QC2.parquet
 direction: max
 ensemble:
-  mc_steps: 100
+  mc_steps: 0
   n_splits: 10
-input_features:
-- TEMP_C
-- T_DEWPOINT_C
-- UGRD_m/s
-- VGRD_m/s
 metric: val_ave_acc
 model:
   activation: leaky
-  annealing_coeff: 50
+  annealing_coeff: 34.593686950910275
   balanced_classes: 1
   batch_size: 100
-  dropout_alpha: 0.31256692323263807
-  epochs: 200
-  hidden_layers: 4
-  hidden_neurons: 6024
-  loss: categorical_crossentropy
+  dropout_alpha: 0.20146936081973893
+  epochs: 1000
+  hidden_layers: 2
+  hidden_neurons: 6461
+  loss: dirichlet
   loss_weights:
-  - 21.465788717561477
-  - 83.31367732936326
-  - 136.50944842077058
-  - 152.62042204485107
-  lr: 0.0004035503144482269
+  - 58.64242174310205
+  - 94.59680461256323
+  - 124.5896569779261
+  - 227.38800030539545
+  lr: 0.0027750619126744817
   optimizer: adam
-  output_activation: softmax
+  output_activation: linear
   use_dropout: 1
   verbose: 0
 mping_path: /glade/p/cisl/aiml/ai2es/winter_ptypes/precip_rap/mPING_mixture/
-output_features:
+ptypes:
 - ra_percent
 - sn_percent
 - pl_percent
 - fzra_percent
+qc: '3.0'
+save_loc: /glade/scratch/schreck/repos/evidential/results/ptype/weighted/production/evidential
+scale_groups:
+- TEMP_C
+- T_DEWPOINT_C
+- UGRD_m/s
+- VGRD_m/s
+scaler_type: robust
+seed: 1000
+test_cutoff: '2020-07-01'
+train_size1: 0.9
+train_size2: 0.0
+verbose: 0
 pbs:
   account: NAML0001
   env_setup: "source ~/.bashrc \nmodule unload cuda cudnn \nconda activate evidential\n\
@@ -180,22 +188,9 @@ pbs:
     export XLA_FLAGS=--xla_gpu_cuda_data_dir=$CONDA_PREFIX"
   gpu_type: v100
   mem: 128GB
-  name: ptype-mlp
+  name: ptype-ev
   ncpus: 8
   ngpus: 1
   queue: casper
   select: 1
   walltime: 43200
-qc: '3.0'
-save_loc: /glade/scratch/schreck/repos/evidential/results/ptype/weighted/production/classifier
-scale_groups:
-- TEMP_C
-- T_DEWPOINT_C
-- UGRD_m/s
-- VGRD_m/s
-scaler_type: quantile
-seed: 1000
-test_cutoff: '2020-07-01'
-train_size1: 0.9
-train_size2: 0.0
-verbose: 0

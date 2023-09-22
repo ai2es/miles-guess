@@ -50,7 +50,6 @@ model:
     lr: 0.0002440268028890707
     metrics: mae
     optimizer: adam
-    uncertainties: false
     use_dropout: true
     use_noise: false
     verbose: 2
@@ -74,10 +73,11 @@ callbacks:
     separator: ","
     append: False
   ModelCheckpoint:
-    filepath: "model.h5"
+    filepath: "tmp.h5"
     monitor: "val_mae"
-    save_weights: True
-    save_best_only: True
+    save_weights: False
+    save_best_only: False
+    restore_best_weights: True
     mode: "min"
     verbose: 0
     

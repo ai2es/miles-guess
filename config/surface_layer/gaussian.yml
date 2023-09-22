@@ -51,7 +51,7 @@ direction: max
 ensemble:
   monte_carlo_passes: 100
   n_models: 1
-  n_splits: 20
+  n_splits: 2
 model:
   activation: relu
   batch_size: 3313
@@ -66,8 +66,7 @@ model:
   metrics: mae
   model_name: best.h5
   optimizer: adam
-  save_path: /glade/scratch/schreck/repos/evidential/results/surface_layer/production/data/friction_velocity/ensemble
-  uncertainties: false
+  save_path: ./
   use_dropout: true
   use_noise: false
   verbose: 2
@@ -85,6 +84,6 @@ pbs:
   queue: casper
   select: 1
   walltime: 86400
-save_loc: /glade/scratch/schreck/repos/evidential/results/surface_layer/production/data/friction_velocity/ensemble
+save_loc: ./
 seed: 1000
 training_metric: val_pitd
