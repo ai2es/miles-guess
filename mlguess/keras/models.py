@@ -988,7 +988,6 @@ class CategoricalDNN(object):
         epsilon=1e-7,
         decay=0,
         verbose=0,
-        classifier=False,
         random_state=1000,
         callbacks=[],
         balanced_classes=0,
@@ -1021,7 +1020,6 @@ class CategoricalDNN(object):
         self.callbacks = callbacks
         self.decay = decay
         self.verbose = verbose
-        self.classifier = classifier
         self.y_labels = None
         self.model = None
         self.random_state = random_state
