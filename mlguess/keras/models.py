@@ -1035,7 +1035,6 @@ class CategoricalDNN(object):
         """
         if self.activation == "leaky":
             self.activation = LeakyReLU()
-
         if self.kernel_reg == "l1":
             self.kernel_reg = L1(self.l1_weight)
         elif self.kernel_reg == "l2":
@@ -1090,19 +1089,17 @@ class CategoricalDNN(object):
 
         inputs = x_train.shape[-1]
         outputs = y_train.shape[-1]
-
-        if self.loss == "dirichlet":
-            for callback in self.callbacks:
-                if isinstance(callback, ReportEpoch):
-                    # Don't use weights within Dirichelt, it is done below using sample weight
-                    self.loss = DirichletEvidentialLoss(
-                        callback=callback, name=self.loss
-                    )
-                    break
-            else:
-                raise OSError(
-                    "The ReportEpoch callback needs to be used in order to run the evidential model."
-                )
+        
+        if self.loss == "evidential":
+            report_epoch_callback = ReportEpoch(self.annealing_coeff)
+            self.callbacks.insert(0, report_epoch_callback)
+            self.loss = DirichletEvidentialLoss(
+                callback=report_epoch_callback, name=self.loss
+            )
+            self.output_activation = "linear"
+        else:
+            self.output_activation = "softmax"
+        
         self.build_neural_network(inputs, outputs)
         if self.balanced_classes:
             train_idx = np.argmax(y_train, 1)
@@ -1124,10 +1121,11 @@ class CategoricalDNN(object):
                 callbacks=self.callbacks,
                 shuffle=True,
             )
-        elif self.loss_weights is not None:
-            sample_weight = np.array([self.loss_weights[np.argmax(_)] for _ in y_train])
-            if not self.steps_per_epoch:
-                self.steps_per_epoch = sample_weight.shape[0] // self.batch_size
+        elif self.loss_weights is not None and self.loss != "evidential": 
+            # Allow weights to be used with ev model but they need loaded into the custom loss first
+            if self.loss == "evidential":
+                logging.warning("Class weights are not being used with the evidential model. They will be supported in a future version.")
+            
             history = self.model.fit(
                 x=x_train,
                 y=y_train,
@@ -1136,14 +1134,10 @@ class CategoricalDNN(object):
                 epochs=self.epochs,
                 verbose=self.verbose,
                 callbacks=self.callbacks,
-                sample_weight=sample_weight,
-                steps_per_epoch=self.steps_per_epoch,
-                # class_weight={k: v for k, v in enumerate(self.loss_weights)},
+                class_weight={k: v for k, v in enumerate(self.loss_weights)},
                 shuffle=True,
             )
         else:
-            # if not self.steps_per_epoch:
-            #    self.steps_per_epoch = sample_weight.shape[0] // self.batch_size
             history = self.model.fit(
                 x=x_train,
                 y=y_train,
@@ -1152,7 +1146,6 @@ class CategoricalDNN(object):
                 epochs=self.epochs,
                 verbose=self.verbose,
                 callbacks=self.callbacks,
-                # steps_per_epoch=self.steps_per_epoch,
                 shuffle=True,
             )
         return history
@@ -1179,6 +1172,15 @@ class CategoricalDNN(object):
         model_class = cls(**conf["model"])
         model_class.build_neural_network(len(input_features), len(output_features))
         model_class.model.load_weights(weights)
+
+        # Load the path to ensemble weights
+        model_class.ensemble_member_files = []
+        if conf["ensemble"]["n_splits"] > 1:
+            for j in range(conf["ensemble"]["n_splits"]):
+                model_class.ensemble_member_files.append(
+                    os.path.join(conf["save_loc"], "models", f"model_{data_split}.h5")
+                )
+                
         return model_class
 
     def save_model(self, model_path):
@@ -1223,13 +1225,13 @@ class CategoricalDNN(object):
         )  # shape (n_samples,)
         return pred_probs, aleatoric, epistemic, entropy, mutual_info
     
-    def predict_ensemble(self, x, weight_locations, batch_size=None):
-        num_models = len(weight_locations)
+    def predict_ensemble(self, x, batch_size=None):
+        num_models = len(self.ensemble_member_files)
 
         # Initialize output_shape based on the first model's prediction
         if num_models > 0:
             first_model = self.model
-            first_model.load_weights(weight_locations[0])
+            first_model.load_weights(self.ensemble_member_files[0])
             first_prediction = self.predict(x, batch_size=batch_size)
             output_shape = first_prediction.shape[1:]
             predictions = np.empty((num_models,) + (x.shape[0],) + output_shape)
@@ -1239,7 +1241,7 @@ class CategoricalDNN(object):
             predictions = np.empty((num_models,) + (x.shape[0],) + output_shape)
 
         # Predict for the remaining models
-        for i, weight_location in enumerate(weight_locations[1:]):
+        for i, weight_location in enumerate(self.ensemble_member_files[1:]):
             model_instance = self.model
             model_instance.load_weights(weight_location)
             y_prob = model_instance.predict(x, batch_size=batch_size)
@@ -1247,19 +1249,16 @@ class CategoricalDNN(object):
 
         return predictions
 
-    def compute_uncertainties(self, y_pred, num_classes=4):
-        return calc_prob_uncertainty(y_pred, num_classes=num_classes)
-
-
-def calc_prob_uncertainty(y_pred, num_classes=4):
-    evidence = tf.nn.relu(y_pred)
-    alpha = evidence + 1
-    S = tf.keras.backend.sum(alpha, axis=1, keepdims=True)
-    u = num_classes / S
-    prob = alpha / S
-    epistemic = prob * (1 - prob) / (S + 1)
-    aleatoric = prob - prob**2 - epistemic
-    return prob, u, aleatoric, epistemic
+    def predict_uncertainty(self, x, num_classes=4):
+        y_pred = self.predict(x)
+        evidence = tf.nn.relu(y_pred)
+        alpha = evidence + 1
+        S = tf.keras.backend.sum(alpha, axis=1, keepdims=True)
+        u = num_classes / S
+        prob = alpha / S
+        epistemic = prob * (1 - prob) / (S + 1)
+        aleatoric = prob - prob**2 - epistemic
+        return prob, u, aleatoric, epistemic
 
 
 def locate_best_model(filepath, metric="val_ave_acc", direction="max"):

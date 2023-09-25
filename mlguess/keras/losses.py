@@ -3,11 +3,12 @@ import numpy as np
 
 
 class DirichletEvidentialLoss(tf.keras.losses.Loss):
-    def __init__(self, callback=False, name="dirichlet"):
+    def __init__(self, callback=False, name="dirichlet", class_weights = []):
 
         super().__init__()
         self.callback = callback
         self.__name__ = name
+        self.class_weights = class_weights
 
     def KL(self, alpha):
         beta = tf.constant(np.ones((1, alpha.shape[1])), dtype=tf.float32)
@@ -48,6 +49,13 @@ class DirichletEvidentialLoss(tf.keras.losses.Loss):
         alpha_hat = y + (1 - y) * alpha
         C = annealing_coef * self.KL(alpha_hat)
         C = tf.reduce_mean(C, axis=1)
+        
+        if self.class_weights:
+            # Apply class weights to the loss terms
+            A *= self.class_weights
+            B *= self.class_weights
+            C *= self.class_weights
+        
         return tf.reduce_mean(A + B + C)
 
 
