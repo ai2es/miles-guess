@@ -1084,6 +1084,36 @@ class CategoricalDNN(object):
 
         self.model.build((self.batch_size, inputs))
         self.model.compile(optimizer=self.optimizer_obj, loss=self.loss)
+        
+    
+    def build_from_sequential(self, model, optimizer="adam", loss="mse", metrics=None):
+        """
+        Build the neural network model using a Keras Sequential model.
+
+        Args:
+            model (tf.keras.Sequential): Keras Sequential model to use.
+            optimizer (str or tf.keras.optimizers.Optimizer): Optimizer for the model.
+            loss (str or tf.keras.losses.Loss): Loss function for the model.
+            metrics (list of str or tf.keras.metrics.Metric): Metrics for the model.
+        """
+        self.model = model
+
+        if self.optimizer == "adam":
+            self.optimizer_obj = Adam(
+                learning_rate=self.lr,
+                beta_1=self.adam_beta_1,
+                beta_2=self.adam_beta_2,
+                epsilon=self.epsilon,
+            )
+        elif self.optimizer == "sgd":
+            self.optimizer_obj = SGD(learning_rate=self.lr, momentum=self.sgd_momentum)
+
+        self.model.compile(
+            optimizer=self.optimizer_obj,
+            loss=self.loss,
+            loss_weights=self.loss_weights,
+            metrics=self.metrics
+        )
 
     def fit(self, x_train, y_train, validation_data=None):
 
