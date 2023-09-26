@@ -362,9 +362,6 @@ class BaseRegressor(object):
         Returns:
             numpy.ndarray: Ensemble predictions for the input data.
         """
-        # if not hasattr(self, "ensemble_weights"):
-        #    raise ValueError("Please run YourModel.load_model(conf) to initiate loading of the trained ensemble weights")
-
         num_models = len(self.ensemble_member_files)
 
         # Initialize output_shape based on the first model's prediction
@@ -431,13 +428,12 @@ class BaseRegressor(object):
 
         return ensemble_mu, ensemble_ale, ensemble_epi
 
-    def predict_monte_carlo(self, x_test, y_test, forward_passes, scaler=None, batch_size=None, num_outputs=1):
+    def predict_monte_carlo(self, x_test, forward_passes, scaler=None, batch_size=None, num_outputs=1):
         """
         Perform Monte Carlo dropout predictions for the model.
 
         Args:
             x_test (numpy.ndarray): Input data for prediction.
-            y_test (numpy.ndarray): True target values corresponding to the input data.
             forward_passes (int): Number of Monte Carlo forward passes to perform.
             y_scaler (optional): Scaler object for post-processing predicted target values (default: None).
             batch_size (optional): Batch size for prediction (default: None).
@@ -448,7 +444,7 @@ class BaseRegressor(object):
         """
 
         n_samples = x_test.shape[0]
-        pred_size = y_test.shape[1]
+        pred_size = self.model.output_shape[-1]
         _batch_size = self.batch_size if batch_size is None else batch_size
 
         output_arrs = [np.zeros((forward_passes, n_samples, pred_size)) for _ in range(num_outputs)]
@@ -712,8 +708,8 @@ class GaussianRegressorDNN(BaseRegressor):
     def predict_ensemble(self, x_test, scaler=None, batch_size=None, num_outputs=2):
         return super().predict_ensemble(x_test, scaler=scaler, batch_size=batch_size, num_outputs=num_outputs)
 
-    def predict_monte_carlo(self, x_test, y_test, forward_passes, scaler=None, batch_size=None, num_outputs=2):
-        return super().predict_monte_carlo(x_test, y_test, forward_passes, scaler=scaler,
+    def predict_monte_carlo(self, x_test, forward_passes, scaler=None, batch_size=None, num_outputs=2):
+        return super().predict_monte_carlo(x_test, forward_passes, scaler=scaler,
                                            batch_size=batch_size, num_outputs=num_outputs)
 
 
@@ -930,9 +926,9 @@ class EvidentialRegressorDNN(BaseRegressor):
         return super().predict_ensemble(x_test, scaler=scaler, batch_size=batch_size, num_outputs=3)
 
     def predict_monte_carlo(
-        self, x_test, y_test, forward_passes, scaler=None, batch_size=None
+        self, x_test, forward_passes, scaler=None, batch_size=None
     ):
-        return super().predict_monte_carlo(x_test, y_test, forward_passes, scaler=scaler, batch_size=batch_size, num_outputs=3)
+        return super().predict_monte_carlo(x_test, forward_passes, scaler=scaler, batch_size=batch_size, num_outputs=3)
 
 
 class CategoricalDNN(object):
@@ -1276,7 +1272,8 @@ class CategoricalDNN(object):
 
         return predictions
 
-    def predict_uncertainty(self, x, num_classes=4):
+    def predict_uncertainty(self, x):
+        num_classes = self.model.output_shape[-1]
         y_pred = self.predict(x)
         evidence = tf.nn.relu(y_pred)
         alpha = evidence + 1
