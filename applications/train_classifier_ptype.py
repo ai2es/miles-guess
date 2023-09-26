@@ -20,8 +20,9 @@ try:
 except ImportError:
     import subprocess
     subprocess.run(['pip', 'install', 'git+https://github.com/ai2es/ptype-physical.git'], check=True)
-    from ptype.callbacks import MetricsCallback
-    from ptype.data import load_ptype_uq, preprocess_data
+    
+from ptype.callbacks import MetricsCallback
+from ptype.data import load_ptype_uq, preprocess_data
 
 from sklearn.model_selection import GroupShuffleSplit
 from mlguess.keras.callbacks import get_callbacks, ReportEpoch
@@ -133,8 +134,8 @@ def trainer(conf, evaluate=True, data_split=0, mc_forward_passes=0):
                     pickle.dump(scaler, fid)
     # set up callbacks
     callbacks = []
-    if use_uncertainty:
-        callbacks.append(ReportEpoch(conf["model"]["annealing_coeff"]))
+    # if use_uncertainty:
+    #     callbacks.append(ReportEpoch(conf["model"]["annealing_coeff"]))
     if "ModelCheckpoint" in conf["callbacks"]:  # speed up echo
         callbacks.append(
             MetricsCallback(
@@ -184,9 +185,8 @@ def trainer(conf, evaluate=True, data_split=0, mc_forward_passes=0):
             )
         for name in data.keys():
             x = scaled_data[f"{name}_x"]
-            pred_probs = mlp.predict(x)
             if use_uncertainty:
-                pred_probs, u, ale, epi = mlp.compute_uncertainties(pred_probs)
+                pred_probs, u, ale, epi = mlp.predict_uncertainty(x)
                 pred_probs = pred_probs.numpy()
                 u = u.numpy()
                 ale = ale.numpy()
@@ -196,6 +196,8 @@ def trainer(conf, evaluate=True, data_split=0, mc_forward_passes=0):
                 _, ale, epi, entropy, mutual_info = mlp.predict_monte_carlo(
                     x, mc_forward_passes=mc_forward_passes
                 )
+            else:
+                pred_probs = mlp.predict(x)
             true_labels = np.argmax(data[name][output_features].to_numpy(), 1)
             pred_labels = np.argmax(pred_probs, 1)
             confidences = np.take_along_axis(pred_probs, pred_labels[:, None], axis=1)

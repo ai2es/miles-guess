@@ -155,7 +155,7 @@ model:
   epochs: 1000
   hidden_layers: 2
   hidden_neurons: 6461
-  loss: dirichlet
+  loss: evidential
   loss_weights:
   - 58.64242174310205
   - 94.59680461256323
@@ -163,7 +163,6 @@ model:
   - 227.38800030539545
   lr: 0.0027750619126744817
   optimizer: adam
-  output_activation: linear
   use_dropout: 1
   verbose: 0
 mping_path: /glade/p/cisl/aiml/ai2es/winter_ptypes/precip_rap/mPING_mixture/

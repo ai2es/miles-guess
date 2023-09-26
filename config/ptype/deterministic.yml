@@ -139,7 +139,7 @@ data_path: "../data/ptype_sample.parquet"
 direction: max
 ensemble:
   mc_steps: 100
-  n_splits: 10
+  n_splits: 2
 input_features:
 - TEMP_C
 - T_DEWPOINT_C
@@ -152,7 +152,7 @@ model:
   balanced_classes: 1
   batch_size: 100
   dropout_alpha: 0.31256692323263807
-  epochs: 200
+  epochs: 1
   hidden_layers: 4
   hidden_neurons: 6024
   loss: categorical_crossentropy
@@ -163,7 +163,6 @@ model:
   - 152.62042204485107
   lr: 0.0004035503144482269
   optimizer: adam
-  output_activation: softmax
   use_dropout: 1
   verbose: 0
 mping_path: /glade/p/cisl/aiml/ai2es/winter_ptypes/precip_rap/mPING_mixture/
