@@ -193,7 +193,7 @@ def trainer(conf, evaluate=True, data_split=0, mc_forward_passes=0):
                 epi = epi.numpy()
             elif mc_forward_passes > 0:  # Compute epistemic uncertainty with MC dropout
                 pred_probs = mlp.predict(x)
-                _, ale, epi, entropy, mutual_info = mlp.predict_monte_carlo(
+                _, ale, epi, entropy, mutual_info = mlp.predict_dropout(
                     x, mc_forward_passes=mc_forward_passes
                 )
             else:

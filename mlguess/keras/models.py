@@ -1220,7 +1220,7 @@ class CategoricalDNN(object):
         y_prob = self.model.predict(x, batch_size=_batch_size, verbose=self.verbose)
         return y_prob
 
-    def predict_monte_carlo(self, x, mc_forward_passes=10, batch_size=None):
+    def predict_dropout(self, x, mc_forward_passes=10, batch_size=None):
         _batch_size = self.batch_size if batch_size is None else batch_size
         y_prob = np.stack(
             [
