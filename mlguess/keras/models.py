@@ -62,7 +62,8 @@ class BaseRegressor(object):
         save_path=".",
         model_name="model.h5",
         metrics=None,
-        eps=1e-7
+        eps=1e-7,
+        num_splits=1
     ):
         self.hidden_layers = hidden_layers
         self.hidden_neurons = hidden_neurons
@@ -95,6 +96,7 @@ class BaseRegressor(object):
         self.eps = eps
         self.ensemble_member_files = []
         self.history = None
+        self.num_splits = num_splits
 
     def build_neural_network(self, inputs, outputs, last_layer="Dense"):
         """
@@ -307,22 +309,22 @@ class BaseRegressor(object):
 
     def mae(self, y_true, y_pred):
         """ Compute the MAE """
-        num_splits = y_pred.shape[-1]
-        if num_splits == 4:
-            mu, _, _, _ = tf.split(y_pred, num_splits, axis=-1)
-        elif num_splits == 2:
-            mu, _ = tf.split(y_pred, num_splits, axis=-1)
+        # num_splits = y_pred.shape[-1]
+        if self.num_splits == 4:
+            mu, _, _, _ = tf.split(y_pred, self.num_splits, axis=-1)
+        elif self.num_splits == 2:
+            mu, _ = tf.split(y_pred, self.num_splits, axis=-1)
         else:
             mu = y_pred  # Assuming num_splits is 1
         return tf.keras.metrics.mean_absolute_error(y_true, mu)
 
     def mse(self, y_true, y_pred):
         """ Compute the MSE """
-        num_splits = y_pred.shape[-1]
-        if num_splits == 4:
-            mu, _, _, _ = tf.split(y_pred, num_splits, axis=-1)
-        elif num_splits == 2:
-            mu, _ = tf.split(y_pred, num_splits, axis=-1)
+        # num_splits = y_pred.shape[-1]
+        if self.num_splits == 4:
+            mu, _, _, _ = tf.split(y_pred, self.num_splits, axis=-1)
+        elif self.num_splits == 2:
+            mu, _ = tf.split(y_pred, self.num_splits, axis=-1)
         else:
             mu = y_pred  # Assuming num_splits is 1
 
@@ -612,6 +614,7 @@ class GaussianRegressorDNN(BaseRegressor):
             save_path,
             model_name,
             metrics,
+            num_splits = 2
         )
         self.eps = eps
         self.loss = GaussianNLL
@@ -796,6 +799,7 @@ class EvidentialRegressorDNN(BaseRegressor):
             save_path,
             model_name,
             metrics,
+            num_splits=4
         )
         self.coupling_coef = coupling_coef
         self.evidential_coef = evidential_coef
