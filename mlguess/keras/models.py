@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 from tensorflow.keras import Input, Model
+from tensorflow.python.keras import backend as K
 from tensorflow.keras.regularizers import L1, L2, L1L2
 from tensorflow.keras.layers import Dense, LeakyReLU, GaussianNoise, Dropout
 from tensorflow.keras.optimizers import Adam, SGD
@@ -1114,6 +1115,7 @@ class CategoricalDNN(object):
         outputs = y_train.shape[-1]
 
         if self.loss == "evidential":
+            this_epoch_num = K.variable(value=0)
             report_epoch_callback = ReportEpoch(self.annealing_coeff)
             self.callbacks.insert(0, report_epoch_callback)
             self.loss = DirichletEvidentialLoss(
