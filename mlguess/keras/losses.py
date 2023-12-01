@@ -64,7 +64,7 @@ class DirichletEvidentialLoss(tf.keras.losses.Loss):
             )
 
         annealing_coef = tf.minimum(
-            1.0, self.callback.this_epoch / self.callback.annealing_coef
+            1.0, this_epoch_num / self.callback.annealing_coef
         )
         alpha_hat = y + (1 - y) * alpha
         C = annealing_coef * self.KL(alpha_hat)
