@@ -83,3 +83,6 @@ class ReportEpoch(tf.keras.callbacks.Callback):
         if logs is None:
             logs = {}
         self.this_epoch += 1
+        K.set_value(
+            this_epoch_num, self.this_epoch
+        )
