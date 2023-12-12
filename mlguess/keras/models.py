@@ -1116,10 +1116,10 @@ class CategoricalDNN(object):
 
         if self.loss == "evidential":
             this_epoch_num = K.variable(value=0)
-            report_epoch_callback = ReportEpoch(self.annealing_coeff)
+            report_epoch_callback = ReportEpoch(self.annealing_coeff, this_epoch_num)
             self.callbacks.insert(0, report_epoch_callback)
             self.loss = DirichletEvidentialLoss(
-                callback=report_epoch_callback, name=self.loss
+                callback=report_epoch_callback, name=self.loss, this_epoch_num=this_epoch_num
             )
             self.output_activation = "linear"
         else:
