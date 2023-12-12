@@ -74,15 +74,16 @@ class LearningRateTracker(Callback):
 
 
 class ReportEpoch(tf.keras.callbacks.Callback):
-    def __init__(self, annealing_coef):
+    def __init__(self, this_epoch_num, annealing_coef):
         super(ReportEpoch, self).__init__()
         self.this_epoch = 0
         self.annealing_coef = annealing_coef
+        self.this_epoch_num = this_epoch_num
 
     def on_epoch_begin(self, epoch, logs=None):
         if logs is None:
             logs = {}
         self.this_epoch += 1
         K.set_value(
-            this_epoch_num, self.this_epoch
+            self.this_epoch_num, self.this_epoch
         )
