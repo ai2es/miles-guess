@@ -4,12 +4,13 @@ import logging
 
 
 class DirichletEvidentialLoss(tf.keras.losses.Loss):
-    def __init__(self, callback=False, name="dirichlet", class_weights=None):
+    def __init__(self, callback=False, name="dirichlet", this_epoch_num = None, class_weights=None):
 
         super().__init__()
         self.callback = callback
         self.__name__ = name
         self.class_weights = class_weights
+        self.this_epoch_num = this_epoch_num
         if self.class_weights:
             logging.warning("The application of class weights to this loss is experimental.")
 
@@ -64,7 +65,7 @@ class DirichletEvidentialLoss(tf.keras.losses.Loss):
             )
 
         annealing_coef = tf.minimum(
-            1.0, self.callback.this_epoch / self.callback.annealing_coef
+            1.0, self.this_epoch_num / self.callback.annealing_coef
         )
         alpha_hat = y + (1 - y) * alpha
         C = annealing_coef * self.KL(alpha_hat)
