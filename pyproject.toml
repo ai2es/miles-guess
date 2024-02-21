@@ -15,6 +15,7 @@ dependencies = [
     "matplotlib",
     "pandas",
     "xarray",
+    "keras",
     "tensorflow",
     "tensorflow_addons",
     "scikit-learn",
@@ -30,6 +31,10 @@ dependencies = [
     "echo-opt",
     "hagelslag",
     "jupyter"
+    "nbsphinx",
+    "myst_parser"
+    "sphinx_book_theme",
+    "pytest"
     ]
 
 [tool.setuptools]
