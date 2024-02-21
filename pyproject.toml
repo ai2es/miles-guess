@@ -30,9 +30,9 @@ dependencies = [
     "bridgescaler",
     "echo-opt",
     "hagelslag",
-    "jupyter"
+    "jupyter",
     "nbsphinx",
-    "myst_parser"
+    "myst_parser",
     "sphinx_book_theme",
     "pytest"
     ]
