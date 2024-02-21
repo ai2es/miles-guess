@@ -28,5 +28,5 @@ dependencies:
     - echo-opt
     - hagelslag
     - bridgescaler
-    - git+https://github.com/ai2es/ptype-physical.git@schreck
+    - git+https://github.com/ai2es/ptype-physical.git
     - .
