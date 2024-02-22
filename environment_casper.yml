@@ -18,6 +18,7 @@ dependencies:
   - jupyterlab
   - cartopy
   - tqdm
+  - seaborn
   - sphinx
   - numba
   - imbalanced-learn

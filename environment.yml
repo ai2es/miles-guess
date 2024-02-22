@@ -17,6 +17,7 @@ dependencies:
   - jupyterlab
   - cartopy
   - tqdm
+  - seaborn
   - sphinx
   - numba
   - properscoring
