@@ -16,8 +16,6 @@ dependencies = [
     "pandas",
     "xarray",
     "keras",
-    "tensorflow",
-    "tensorflow_addons",
     "scikit-learn",
     "netcdf4",
     "pyyaml",
@@ -36,6 +34,15 @@ dependencies = [
     "sphinx_book_theme",
     "pytest"
     ]
+
+[project.optional-dependencies]
+tensorflow = ["tensorflow>=2.12"]
+
+tensorflow_gpu = ["tensorflow[and-cuda]"]
+
+torch = ["torch"]
+
+
 
 [tool.setuptools]
 packages = ["mlguess", "mlguess.keras", "mlguess.torch"]

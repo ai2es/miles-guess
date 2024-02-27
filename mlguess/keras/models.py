@@ -156,9 +156,9 @@ class BaseRegressor(object):
             self.optimizer_obj = SGD(learning_rate=self.lr, momentum=self.sgd_momentum)
 
         if self.metrics == "mae":
-            metrics = self.mae
+            metrics = [self.mae]
         elif self.metrics == "mse":
-            metrics = self.mse
+            metrics = [self.mse]
         else:
             metrics = None
 
@@ -316,7 +316,7 @@ class BaseRegressor(object):
             mu, _ = tf.split(y_pred, num_splits, axis=-1)
         else:
             mu = y_pred  # Assuming num_splits is 1
-        return tf.keras.metrics.mean_absolute_error(y_true, mu)
+        return keras.metrics.mean_absolute_error(y_true, mu)
 
     def mse(self, y_true, y_pred):
         """ Compute the MSE """
@@ -328,7 +328,7 @@ class BaseRegressor(object):
         else:
             mu = y_pred  # Assuming num_splits is 1
 
-        return tf.keras.metrics.mean_squared_error(y_true, mu)
+        return keras.metrics.mean_squared_error(y_true, mu)
 
     def predict(self, x, scaler=None, batch_size=None):
         """
@@ -1301,7 +1301,7 @@ def locate_best_model(filepath, metric="val_ave_acc", direction="max"):
     best_c = scores["metric"].index(func(scores["metric"]))
     return scores["best_ensemble"][best_c]
 
-
+# @keras.saving.register_keras_serializable(package="SEALS_keras")
 class CategoricalDNN_keras3(keras.models.Model):
     """
     A Dense Neural Network Model that can support arbitrary numbers of hidden layers.
@@ -1392,6 +1392,8 @@ class CategoricalDNN_keras3(keras.models.Model):
         self.balanced_classes = balanced_classes
         self.steps_per_epoch = steps_per_epoch
         self.outputs = 4
+        self.current_epoch = keras.Variable(initializer=0, dtype='float32', trainable=False)
+
         """
         Create Keras neural network model and compile it.
         Args:
@@ -1428,7 +1430,13 @@ class CategoricalDNN_keras3(keras.models.Model):
         for l in range(1, len(self.model_layers)):
             layer_output = self.model_layers[l](layer_output)
 
+        self.current_epoch.assign_add(1)
         return layer_output
+
+    def get_config(self):
+        base_config = super().get_config()
+        # parameter_config = {hp: getattr(self, hp) for hp in self.hyperparameters}
+        return base_config
 
     @classmethod
     def load_model(cls, conf):
@@ -1467,10 +1475,6 @@ class CategoricalDNN_keras3(keras.models.Model):
         tf.keras.models.save_model(self.model, model_path, save_format="h5")
         return
 
-    def predict(self, x, batch_size=None):
-        _batch_size = self.batch_size if batch_size is None else batch_size
-        y_prob = self.model.predict(x, batch_size=_batch_size, verbose=self.verbose)
-        return y_prob
 
     def predict_proba(self, x, batch_size=None):
         _batch_size = self.batch_size if batch_size is None else batch_size

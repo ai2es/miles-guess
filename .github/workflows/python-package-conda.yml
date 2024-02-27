@@ -21,6 +21,7 @@ jobs:
           numpy
     - shell: bash -l {0}
       run: |
+        pip install --upgrade keras
         conda info
         conda list
         conda config --show-sources
