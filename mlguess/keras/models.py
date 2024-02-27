@@ -1,6 +1,7 @@
 import os
 import sys
 import glob
+import keras
 import numpy as np
 import pandas as pd
 import tensorflow as tf
@@ -10,7 +11,7 @@ from tensorflow.keras.regularizers import L1, L2, L1L2
 from tensorflow.keras.layers import Dense, LeakyReLU, GaussianNoise, Dropout
 from tensorflow.keras.optimizers import Adam, SGD
 from mlguess.keras.layers import DenseNormalGamma, DenseNormal
-from mlguess.keras.losses import EvidentialRegressionLoss, EvidentialRegressionCoupledLoss, GaussianNLL
+from mlguess.keras.losses import EvidentialRegressionLoss, EvidentialRegressionCoupledLoss, gaussian_nll
 from mlguess.keras.losses import DirichletEvidentialLoss
 from mlguess.keras.callbacks import ReportEpoch
 from imblearn.under_sampling import RandomUnderSampler
@@ -615,7 +616,7 @@ class GaussianRegressorDNN(BaseRegressor):
             metrics,
         )
         self.eps = eps
-        self.loss = GaussianNLL
+        self.loss = gaussian_nll()
 
     def build_neural_network(self, inputs, outputs, last_layer="DenseNormal"):
         """
@@ -813,7 +814,7 @@ class EvidentialRegressorDNN(BaseRegressor):
                 coeff=self.evidential_coef, r=self.coupling_coef
             )
         else:
-            raise ValueError("loss needs to be one of evidentialReg or evidentialFix")
+            raise ValueError("loss needs to be one of 'evidentialReg' or 'evidentialFix'")
 
         logging.info(f"Using loss: {loss}")
 
@@ -1299,3 +1300,243 @@ def locate_best_model(filepath, metric="val_ave_acc", direction="max"):
 
     best_c = scores["metric"].index(func(scores["metric"]))
     return scores["best_ensemble"][best_c]
+
+
+class CategoricalDNN_keras3(keras.models.Model):
+    """
+    A Dense Neural Network Model that can support arbitrary numbers of hidden layers.
+    Attributes:
+        hidden_layers: Number of hidden layers
+        hidden_neurons: Number of neurons in each hidden layer
+        activation: Type of activation function
+        output_activation: Activation function applied to the output layer
+        optimizer: Name of optimizer or optimizer object.
+        loss: Name of loss functions or loss objects (can match up to number of output layers)
+        loss_weights: Weights to be assigned to respective loss/output layer
+        use_noise: Whether or not additive Gaussian noise layers are included in the network
+        noise_sd: The standard deviation of the Gaussian noise layers
+        lr: Learning rate for optimizer
+        use_dropout: Whether or not Dropout layers are added to the network
+        dropout_alpha: proportion of neurons randomly set to 0.
+        batch_size: Number of examples per batch
+        epochs: Number of epochs to train
+        l2_weight: L2 weight parameter
+        sgd_momentum: SGD optimizer momentum parameter
+        adam_beta_1: Adam optimizer beta_1 parameter
+        adam_beta_2: Adam optimizer beta_2 parameter
+        decay: Level of decay to apply to learning rate
+        verbose: Level of detail to provide during training (0 = None, 1 = Minimal, 2 = All)
+        classifier: (boolean) If training on classes
+    """
+    def __init__(
+        self,
+        hidden_layers=2,
+        hidden_neurons=64,
+        activation="relu",
+        output_activation="softmax",
+        optimizer="adam",
+        loss="categorical_crossentropy",
+        loss_weights=None,
+        annealing_coeff=1.0,
+        use_noise=False,
+        noise_sd=0.0,
+        lr=0.001,
+        use_dropout=False,
+        dropout_alpha=0.2,
+        batch_size=128,
+        epochs=2,
+        kernel_reg=None,
+        l1_weight=0.0,
+        l2_weight=0.0,
+        sgd_momentum=0.9,
+        adam_beta_1=0.9,
+        adam_beta_2=0.999,
+        epsilon=1e-7,
+        decay=0,
+        verbose=0,
+        random_state=1000,
+        callbacks=[],
+        balanced_classes=0,
+        steps_per_epoch=0,
+        **kwargs):
+        super().__init__(**kwargs)
+        self.hidden_layers = hidden_layers
+        self.hidden_neurons = hidden_neurons
+        self.activation = activation
+        self.output_activation = output_activation
+        self.optimizer = optimizer
+        self.optimizer_obj = None
+        self.sgd_momentum = sgd_momentum
+        self.adam_beta_1 = adam_beta_1
+        self.adam_beta_2 = adam_beta_2
+        self.epsilon = epsilon
+        self.loss = loss
+        self.loss_weights = loss_weights
+        self.annealing_coeff = annealing_coeff
+        self.lr = lr
+        self.kernel_reg = kernel_reg
+        self.l1_weight = l1_weight
+        self.l2_weight = l2_weight
+        self.batch_size = batch_size
+        self.use_noise = use_noise
+        self.noise_sd = noise_sd
+        self.use_dropout = use_dropout
+        self.dropout_alpha = dropout_alpha
+        self.epochs = epochs
+        self.callbacks = callbacks
+        self.decay = decay
+        self.verbose = verbose
+        self.y_labels = None
+        self.model = None
+        self.random_state = random_state
+        self.balanced_classes = balanced_classes
+        self.steps_per_epoch = steps_per_epoch
+        self.outputs = 4
+        """
+        Create Keras neural network model and compile it.
+        Args:
+            inputs (int): Number of input predictor variables
+            outputs (int): Number of output predictor variables
+        """
+        if self.activation == "leaky":
+            self.activation = LeakyReLU()
+        if self.kernel_reg == "l1":
+            self.kernel_reg = L1(self.l1_weight)
+        elif self.kernel_reg == "l2":
+            self.kernel_reg = L2(self.l2_weight)
+        elif self.kernel_reg == "l1_l2":
+            self.kernel_reg = L1L2(self.l1_weight, self.l2_weight)
+        else:
+            self.kernel_reg = None
+        self.model_layers = []
+        for h in range(self.hidden_layers):
+            self.model_layers.append(Dense(self.hidden_neurons,
+                                                       activation=self.activation,
+                                                       kernel_regularizer=self.kernel_reg,
+                                                       name=f"dense_{h:02d}"))
+            if self.use_dropout:
+                self.model_layers.append(Dropout(self.dropout_alpha, name=f"dropout_{h:02d}"))
+            if self.use_noise:
+                self.model_layers.append(GaussianNoise(self.noise_sd, name=f"noise_{h:02d}"))
+
+        self.model_layers.append(Dense(self.outputs, activation=self.output_activation, name="dense_output"))
+
+    def call(self, inputs):
+
+        layer_output = self.model_layers[0](inputs)
+
+        for l in range(1, len(self.model_layers)):
+            layer_output = self.model_layers[l](layer_output)
+
+        return layer_output
+
+    @classmethod
+    def load_model(cls, conf):
+        weights = os.path.join(conf["save_loc"], "models", "best.h5")
+        if not os.path.isfile(weights):
+            raise ValueError(
+                "No saved model exists. You must train a model first. Exiting."
+            )
+
+        logging.info(
+            f"Loading a CategoricalDNN with pre-trained weights from path {weights}"
+        )
+        input_features = conf["input_features"]
+        output_features = conf["output_features"]
+
+        # flag for our ptype model
+        if all([x in conf for x in input_features]):
+            input_features = [conf[x] for x in input_features]
+            input_features = [item for sublist in input_features for item in sublist]
+
+        model_class = cls(**conf["model"])
+        model_class.build_neural_network(len(input_features), len(output_features))
+        model_class.model.load_weights(weights)
+
+        # Load the path to ensemble weights
+        model_class.ensemble_member_files = []
+        if conf["ensemble"]["n_splits"] > 1:
+            for j in range(conf["ensemble"]["n_splits"]):
+                model_class.ensemble_member_files.append(
+                    os.path.join(conf["save_loc"], "models", f"model_{j}.h5")
+                )
+
+        return model_class
+
+    def save_model(self, model_path):
+        tf.keras.models.save_model(self.model, model_path, save_format="h5")
+        return
+
+    def predict(self, x, batch_size=None):
+        _batch_size = self.batch_size if batch_size is None else batch_size
+        y_prob = self.model.predict(x, batch_size=_batch_size, verbose=self.verbose)
+        return y_prob
+
+    def predict_proba(self, x, batch_size=None):
+        _batch_size = self.batch_size if batch_size is None else batch_size
+        y_prob = self.model.predict(x, batch_size=_batch_size, verbose=self.verbose)
+        return y_prob
+
+    def predict_dropout(self, x, mc_forward_passes=10, batch_size=None):
+        _batch_size = self.batch_size if batch_size is None else batch_size
+        y_prob = np.stack(
+            [
+                np.vstack(
+                    [
+                        self.model(tf.expand_dims(lx, axis=-1), training=True)
+                        for lx in np.array_split(x, x.shape[0] // _batch_size)
+                    ]
+                )
+                for _ in range(mc_forward_passes)
+            ]
+        )
+        pred_probs = y_prob.mean(axis=0)
+        epistemic = y_prob.var(axis=0)
+        aleatoric = np.mean(y_prob * (1.0 - y_prob), axis=0)
+
+        # Calculating entropy across multiple MCD forward passes
+        epsilon = sys.float_info.min
+        entropy = -np.sum(
+            pred_probs * np.log(pred_probs + epsilon), axis=-1
+        )  # shape (n_samples,)
+        # Calculating mutual information across multiple MCD forward passes
+        mutual_info = entropy - np.mean(
+            np.sum(-np.array(y_prob) * np.log(y_prob + epsilon), axis=-1), axis=0
+        )  # shape (n_samples,)
+        return pred_probs, aleatoric, epistemic, entropy, mutual_info
+
+    def predict_ensemble(self, x, batch_size=None):
+        num_models = len(self.ensemble_member_files)
+
+        # Initialize output_shape based on the first model's prediction
+        if num_models > 0:
+            first_model = self.model
+            first_model.load_weights(self.ensemble_member_files[0])
+            first_prediction = self.predict(x, batch_size=batch_size)
+            output_shape = first_prediction.shape[1:]
+            predictions = np.empty((num_models,) + (x.shape[0],) + output_shape)
+            predictions[0] = first_prediction
+        else:
+            output_shape = ()  # Default shape if no models
+            predictions = np.empty((num_models,) + (x.shape[0],) + output_shape)
+
+        # Predict for the remaining models
+        for i, weight_location in enumerate(self.ensemble_member_files[1:]):
+            model_instance = self.model
+            model_instance.load_weights(weight_location)
+            y_prob = model_instance.predict(x, batch_size=batch_size)
+            predictions[i + 1] = y_prob
+
+        return predictions
+
+    def predict_uncertainty(self, x):
+        num_classes = self.model.output_shape[-1]
+        y_pred = self.predict(x)
+        evidence = tf.nn.relu(y_pred)
+        alpha = evidence + 1
+        S = tf.keras.backend.sum(alpha, axis=1, keepdims=True)
+        u = num_classes / S
+        prob = alpha / S
+        epistemic = prob * (1 - prob) / (S + 1)
+        aleatoric = prob - prob**2 - epistemic
+        return prob, u, aleatoric, epistemic
