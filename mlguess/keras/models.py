@@ -316,7 +316,7 @@ class BaseRegressor(object):
             mu, _ = tf.split(y_pred, num_splits, axis=-1)
         else:
             mu = y_pred  # Assuming num_splits is 1
-        return tf.keras.metrics.mean_absolute_error(y_true, mu)
+        return keras.metrics.mean_absolute_error(y_true, mu)
 
     def mse(self, y_true, y_pred):
         """ Compute the MSE """
@@ -328,7 +328,7 @@ class BaseRegressor(object):
         else:
             mu = y_pred  # Assuming num_splits is 1
 
-        return tf.keras.metrics.mean_squared_error(y_true, mu)
+        return keras.metrics.mean_squared_error(y_true, mu)
 
     def predict(self, x, scaler=None, batch_size=None):
         """
@@ -1467,10 +1467,6 @@ class CategoricalDNN_keras3(keras.models.Model):
         tf.keras.models.save_model(self.model, model_path, save_format="h5")
         return
 
-    def predict(self, x, batch_size=None):
-        _batch_size = self.batch_size if batch_size is None else batch_size
-        y_prob = self.model.predict(x, batch_size=_batch_size, verbose=self.verbose)
-        return y_prob
 
     def predict_proba(self, x, batch_size=None):
         _batch_size = self.batch_size if batch_size is None else batch_size
