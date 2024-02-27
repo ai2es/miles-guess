@@ -7,6 +7,7 @@ dependencies:
   - scipy
   - matplotlib
   - xarray
+  - metpy
   - netcdf4
   - pandas
   - pyyaml
@@ -17,6 +18,7 @@ dependencies:
   - jupyterlab
   - cartopy
   - tqdm
+  - seaborn
   - sphinx
   - numba
   - properscoring
@@ -28,5 +30,5 @@ dependencies:
     - echo-opt
     - hagelslag
     - bridgescaler
-    - git+https://github.com/ai2es/ptype-physical.git
-    - .
+    - -e git+https://github.com/ai2es/ptype-physical.git#egg=ptype
+    - -e .
