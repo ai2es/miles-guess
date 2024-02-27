@@ -17,18 +17,18 @@ class DenseNormalGamma(layers.Layer):
     Returns:
         [mu, lambda, alpha, beta] (see reference documentation for more)
     """
-    
+    NUM_OUTPUT_PARAMS = 4
+
     def __init__(self, units: int,
                  spectral_normalization: bool = False,
                  eps: float = 1e-12, **kwargs):
         super().__init__(**kwargs)
         self.units = int(units)
-        self.NUM_OUTPUT_PARAMS = 4
         if spectral_normalization:
-            self.dense = layers.SpectralNormalization(layers.Dense(self.NUM_OUTPUT_PARAMS * self.units,
+            self.dense = layers.SpectralNormalization(layers.Dense(DenseNormalGamma.NUM_OUTPUT_PARAMS * self.units,
                                                                    activation=None))
         else:
-            self.dense = layers.Dense(self.NUM_OUTPUT_PARAMS * self.units, activation=None)
+            self.dense = layers.Dense(DenseNormalGamma.NUM_OUTPUT_PARAMS * self.units, activation=None)
         self.eps = eps
 
     def evidence(self, x):
@@ -52,7 +52,7 @@ class DenseNormalGamma(layers.Layer):
         return ops.concatenate([mu, v, alpha, beta], axis=-1)
 
     def compute_output_shape(self, input_shape):
-        return input_shape[0], self.NUM_OUTPUT_PARAMS * self.units
+        return input_shape[0], DenseNormalGamma.NUM_OUTPUT_PARAMS * self.units
 
     def get_config(self):
         base_config = super(DenseNormalGamma, self).get_config()
@@ -72,21 +72,21 @@ class DenseNormal(layers.Layer):
 
     Returns:
         mu, sigma: mean and standard deviation of output
-    todo:
-        Make Spectral Normalization an option
     """
+    NUM_OUTPUT_PARAMS = 2
+
     def __init__(self, units: int,
                  spectral_normalization: bool = False,
                  eps: float = 1e-12, output_activation="sigmoid", **kwargs):
         super().__init__(**kwargs)
         self.units = int(units)
-        self.NUM_OUTPUT_PARAMS = 2
         self.output_activation = output_activation
         if spectral_normalization:
-            self.dense = layers.SpectralNormalization(layers.Dense(self.NUM_OUTPUT_PARAMS * self.units,
+            self.dense = layers.SpectralNormalization(layers.Dense(DenseNormal.NUM_OUTPUT_PARAMS * self.units,
                                                                    activation=self.output_activation))
         else:
-            self.dense = layers.Dense(self.NUM_OUTPUT_PARAMS * self.units, activation=self.output_activation)
+            self.dense = layers.Dense(DenseNormal.NUM_OUTPUT_PARAMS * self.units,
+                                      activation=self.output_activation)
         self.eps = eps
 
     def call(self, x):
@@ -96,7 +96,7 @@ class DenseNormal(layers.Layer):
         return ops.concatenate([mu, sigma], axis=-1)
 
     def compute_output_shape(self, input_shape):
-        return input_shape[0], self.NUM_OUTPUT_PARAMS * self.units
+        return input_shape[0], DenseNormal.NUM_OUTPUT_PARAMS * self.units
 
     def get_config(self):
         base_config = super(DenseNormal, self).get_config()
