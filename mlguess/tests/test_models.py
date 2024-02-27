@@ -30,7 +30,7 @@ class TestModels(unittest.TestCase):
             self.evidential_conf = yaml.load(cf, Loader=yaml.FullLoader)
 
         # Instantiate and preprocess the data (as you did before)...
-        data_file = "/Users/cbecker/PycharmProjects/miles-guess/data/sample_cabauw_surface_layer.csv"
+        data_file = "data/sample_cabauw_surface_layer.csv"
         self.data = pd.read_csv(data_file)
         self.data["day"] = self.data["Time"].apply(lambda x: str(x).split(" ")[0])
 
