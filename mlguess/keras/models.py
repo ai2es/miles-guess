@@ -156,9 +156,9 @@ class BaseRegressor(object):
             self.optimizer_obj = SGD(learning_rate=self.lr, momentum=self.sgd_momentum)
 
         if self.metrics == "mae":
-            metrics = self.mae
+            metrics = [self.mae]
         elif self.metrics == "mse":
-            metrics = self.mse
+            metrics = [self.mse]
         else:
             metrics = None
 
