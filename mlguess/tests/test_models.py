@@ -1,25 +1,28 @@
 import warnings
 warnings.filterwarnings("ignore")
-
 import yaml
 import unittest
 import pandas as pd
+import numpy as np
 from sklearn.model_selection import GroupShuffleSplit
 from sklearn.preprocessing import RobustScaler, MinMaxScaler
 from mlguess.keras.models import BaseRegressor as RegressorDNN
 from mlguess.keras.models import GaussianRegressorDNN
 from mlguess.keras.models import EvidentialRegressorDNN
+from mlguess.keras.models import CategoricalDNN_keras3
+from mlguess.keras.losses import DirichletEvidentialLoss, EvidentialCatLoss
+from keras.models import load_model
 
 class TestModels(unittest.TestCase):
     def setUp(self):
         # Load configurations for the models
-        self.mlp_config = "config/surface_layer/mlp.yml"
-        self.gaussian_config = "config/surface_layer/gaussian.yml"
-        self.evidential_config = "config/surface_layer/evidential.yml"
+        self.mlp_config = "/Users/cbecker/PycharmProjects/miles-guess/config/surface_layer/mlp.yml"
+        self.gaussian_config = "/Users/cbecker/PycharmProjects/miles-guess/config/surface_layer/gaussian.yml"
+        self.evidential_config = "/Users/cbecker/PycharmProjects/miles-guess/config/surface_layer/evidential.yml"
 
         with open(self.mlp_config) as cf:
             self.mlp_conf = yaml.load(cf, Loader=yaml.FullLoader)
-            
+
         with open(self.gaussian_config) as cf:
             self.gaussian_conf = yaml.load(cf, Loader=yaml.FullLoader)
 
@@ -27,7 +30,7 @@ class TestModels(unittest.TestCase):
             self.evidential_conf = yaml.load(cf, Loader=yaml.FullLoader)
 
         # Instantiate and preprocess the data (as you did before)...
-        data_file = "data/sample_cabauw_surface_layer.csv"
+        data_file = "/Users/cbecker/PycharmProjects/miles-guess/data/sample_cabauw_surface_layer.csv"
         self.data = pd.read_csv(data_file)
         self.data["day"] = self.data["Time"].apply(lambda x: str(x).split(" ")[0])
 
@@ -86,6 +89,16 @@ class TestModels(unittest.TestCase):
         assert evidential_model.model.output.shape[1] == 4
         # Test the EvidentialRegressorDNN model here...
         # Example: evidential_model.fit(...) and assertions
+
+    def test_evi_cat(self):
+
+        x_train = np.random.random(size=(10000, 10)).astype('float32')
+        y_train = np.random.randint(size=(10000, 4), high=4, low=0).astype('float32')
+        model = CategoricalDNN_keras3()
+        model.compile(loss=EvidentialCatLoss(model.current_epoch, model.annealing_coeff), optimizer="adam")
+        model.fit(x_train, y_train)
+        model.save("test_model2.keras")
+        load_model("test_model2.keras")
 
 if __name__ == "__main__":
     unittest.main()
