@@ -75,7 +75,7 @@ class DirichletEvidentialLoss(keras.losses.Loss):
 
         return ops.mean(A + B + C)
 
-
+@keras.saving.register_keras_serializable()
 def EvidentialCatLoss(evi_coef, current_epoch, class_weights=None):
 
     def calc_kl(alpha):
@@ -93,6 +93,7 @@ def EvidentialCatLoss(evi_coef, current_epoch, class_weights=None):
             kl = (ops.sum((alpha - beta) * (dg1 - dg0), axis=1, keepdims=True) + lnB + lnB_uni)
         return kl
 
+    @keras.saving.register_keras_serializable()
     def loss(y, y_pred):
         evidence = ops.relu(y_pred)
         alpha = evidence + 1

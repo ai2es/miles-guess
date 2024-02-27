@@ -1301,7 +1301,6 @@ def locate_best_model(filepath, metric="val_ave_acc", direction="max"):
     best_c = scores["metric"].index(func(scores["metric"]))
     return scores["best_ensemble"][best_c]
 
-# @keras.saving.register_keras_serializable(package="SEALS_keras")
 class CategoricalDNN_keras3(keras.models.Model):
     """
     A Dense Neural Network Model that can support arbitrary numbers of hidden layers.
