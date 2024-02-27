@@ -16,9 +16,9 @@ from keras.models import load_model
 class TestModels(unittest.TestCase):
     def setUp(self):
         # Load configurations for the models
-        self.mlp_config = "/Users/cbecker/PycharmProjects/miles-guess/config/surface_layer/mlp.yml"
-        self.gaussian_config = "/Users/cbecker/PycharmProjects/miles-guess/config/surface_layer/gaussian.yml"
-        self.evidential_config = "/Users/cbecker/PycharmProjects/miles-guess/config/surface_layer/evidential.yml"
+        self.mlp_config = "config/surface_layer/mlp.yml"
+        self.gaussian_config = "config/surface_layer/gaussian.yml"
+        self.evidential_config = "config/surface_layer/evidential.yml"
 
         with open(self.mlp_config) as cf:
             self.mlp_conf = yaml.load(cf, Loader=yaml.FullLoader)
