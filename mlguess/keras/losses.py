@@ -1,9 +1,11 @@
 import tensorflow as tf
 import numpy as np
 import logging
+import keras
+import keras.ops as ops
 
 
-class DirichletEvidentialLoss(tf.keras.losses.Loss):
+class DirichletEvidentialLoss(keras.losses.Loss):
     """
     Loss function for an evidential categorical model.
     Args:
@@ -65,68 +67,44 @@ class DirichletEvidentialLoss(tf.keras.losses.Loss):
         return tf.reduce_mean(A + B + C)
 
 
-class DirichletEvidentialLoss_keras3(tf.keras.losses.Loss):
-    """
-    Loss function for an evidential categorical model.
-    Args:
-        callback (list): List of callbacks.
-        name (str): reference name
-        this_epoch_num (int):  Epoch callback
-        class_weights (list): List of class weights (experimental)
-    """
-    def __init__(self, callback=None, name="dirichlet", this_epoch_num=None, class_weights=None):
+def EvidentialCatLoss(evi_coef, current_epoch, class_weights=None):
 
-        super().__init__()
-        self.callback = callback
-        self.__name__ = name
-        self.class_weights = class_weights
-        self.this_epoch_num = this_epoch_num
-        if self.class_weights:
-            logging.warning("The application of class weights to this loss is experimental.")
-
-    def kl(self, alpha):
-        beta = tf.constant(np.ones((1, alpha.shape[1])), dtype=tf.float32)
-        S_alpha = tf.reduce_sum(alpha, axis=1, keepdims=True)
-        S_beta = tf.reduce_sum(beta, axis=1, keepdims=True)
-        lnB = tf.math.lgamma(S_alpha) - tf.reduce_sum(
-            tf.math.lgamma(alpha), axis=1, keepdims=True
-        )
-        lnB_uni = tf.reduce_sum(
-            tf.math.lgamma(beta), axis=1, keepdims=True
-        ) - tf.math.lgamma(S_beta)
-
+    def calc_kl(alpha):
+        beta = ops.ones(shape=(1, alpha.shape[1]), dtype=tf.float32)
+        S_alpha = ops.sum(alpha, axis=1, keepdims=True)
+        S_beta = ops.sum(beta, axis=1, keepdims=True)
+        lnB = tf.math.lgamma(S_alpha) - ops.sum(tf.math.lgamma(alpha), axis=1, keepdims=True)
+        lnB_uni = ops.sum(tf.math.lgamma(beta), axis=1, keepdims=True) - tf.math.lgamma(S_beta)
         dg0 = tf.math.digamma(S_alpha)
         dg1 = tf.math.digamma(alpha)
-
-        if self.class_weights:
-            kl = (tf.reduce_sum(self.class_weights * (alpha - beta) * (dg1 - dg0), axis=1, keepdims=True) + lnB +
+        if class_weights:
+            kl = (ops.sum(class_weights * (alpha - beta) * (dg1 - dg0), axis=1, keepdims=True) + lnB +
                   lnB_uni)
         else:
-            kl = (tf.reduce_sum((alpha - beta) * (dg1 - dg0), axis=1, keepdims=True) + lnB + lnB_uni)
+            kl = (ops.sum((alpha - beta) * (dg1 - dg0), axis=1, keepdims=True) + lnB + lnB_uni)
         return kl
 
-    def __call__(self, y, output, sample_weight=None):
-        evidence = tf.nn.relu(output)
+    def loss(y, y_pred):
+        evidence = tf.nn.relu(y_pred)
         alpha = evidence + 1
+        s = ops.sum(alpha, axis=1, keepdims=True)
+        m = alpha / s
 
-        S = tf.reduce_sum(alpha, axis=1, keepdims=True)
-        m = alpha / S
-
-        if self.class_weights:
-            A = tf.reduce_sum(self.class_weights * (y - m) ** 2, axis=1, keepdims=True)
-            B = tf.reduce_sum(self.class_weights * alpha * (S - alpha) / (S * S * (S + 1)), axis=1, keepdims=True)
+        if class_weights:
+            a = ops.sum(class_weights * (y - m) ** 2, axis=1, keepdims=True)
+            b = ops.sum(class_weights * alpha * (s - alpha) / (s * s * (s + 1)), axis=1, keepdims=True)
         else:
-            A = tf.reduce_sum((y - m) ** 2, axis=1, keepdims=True)
-            B = tf.reduce_sum(alpha * (S - alpha) / (S * S * (S + 1)), axis=1, keepdims=True)
+            a = ops.sum((y - m) ** 2, axis=1, keepdims=True)
+            b = ops.sum(alpha * (s - alpha) / (s * s * (s + 1)), axis=1, keepdims=True)
 
-        annealing_coef = tf.minimum(1.0, self.this_epoch_num / self.callback.annealing_coef)
+        annealing_coef = ops.minimum(1.0, current_epoch / evi_coef)
         alpha_hat = y + (1 - y) * alpha
-        C = annealing_coef * self.KL(alpha_hat)
-        C = tf.reduce_mean(C, axis=1)
+        c = annealing_coef * calc_kl(alpha_hat)
+        c = ops.mean(c, axis=1)
 
-        return tf.reduce_mean(A + B + C)
+        return ops.mean(a + b + c)
 
-
+    return loss
 
 class EvidentialRegressionLoss(tf.keras.losses.Loss):
     """
