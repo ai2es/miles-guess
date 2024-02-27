@@ -26,7 +26,6 @@ dependencies:
   - imbalanced-learn
   - pip:
     - tensorflow
-    - tensorflow_addons
     - echo-opt
     - hagelslag
     - bridgescaler
