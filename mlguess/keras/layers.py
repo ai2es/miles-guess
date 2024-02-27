@@ -10,6 +10,7 @@ class DenseNormalGamma(tf.keras.layers.Layer):
     Args:
         units (int): Output size of regression tasks
         name (str): Name of the layer
+        spectral_normalization (Bool): Whether to use Spectral Normalization
         eps (float): Minimum value for evidence (prevents potential division by zero)
 
     Returns:
@@ -54,6 +55,7 @@ class DenseNormal(tf.keras.layers.Layer):
     Args:
         units (int): Output size of regression tasks
         name (str): Name of the layer
+        spectral_normalization (Bool): Whether to use Spectral Normalization
         eps (float): Minimum value for evidence (prevents potential division by zero)
 
     Returns:
