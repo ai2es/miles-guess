@@ -3,7 +3,7 @@ import tensorflow_addons as tfa
 
 class DenseNormalGamma(tf.keras.layers.Layer):
     """
-    Implements dense layer for an evidential model.
+    Implements dense layer for an deep evidential regression model.
     Reference: https://www.mit.edu/~amini/pubs/pdf/deep-evidential-regression.pdf
     Source: https://github.com/aamini/evidential-deep-learning
 
@@ -13,16 +13,19 @@ class DenseNormalGamma(tf.keras.layers.Layer):
         eps (float): Minimum value for evidence (prevents potential division by zero)
 
     Returns:
-        [mu, evidence, alpha, beta] (see reference documentation for more)
+        [mu, lambda, alpha, beta] (see reference documentation for more)
     todo:
         Make Spectral Normalization an option
     """
     
-    def __init__(self, units, name, eps=1e-12, **kwargs):
+    def __init__(self, units, name, spectral_normalization=False, eps=1e-12, **kwargs):
         """ """
         super(DenseNormalGamma, self).__init__(name=name, **kwargs)
         self.units = int(units)
-        self.dense = tfa.layers.SpectralNormalization(tf.keras.layers.Dense(4 * self.units, activation=None))
+        if spectral_normalization:
+            self.dense = tfa.layers.SpectralNormalization(tf.keras.layers.Dense(4 * self.units, activation=None))
+        elif spectral_normalization == False:
+            self.dense = tf.keras.layers.Dense(4 * self.units, activation=None)
         self.eps = eps
 
     def evidence(self, x):
@@ -47,7 +50,7 @@ class DenseNormalGamma(tf.keras.layers.Layer):
         
         
 class DenseNormal(tf.keras.layers.Layer):
-    """ Dense layer for a Gaussian distribution.
+    """ Dense layer for Gaussian distribution regression.
     Args:
         units (int): Output size of regression tasks
         name (str): Name of the layer
@@ -58,10 +61,13 @@ class DenseNormal(tf.keras.layers.Layer):
     todo:
         Make Spectral Normalization an option
     """
-    def __init__(self, units, name, eps=1e-12):
+    def __init__(self, units, name, spectral_normalization=False, eps=1e-12):
         super(DenseNormal, self).__init__(name=name)
         self.units = int(units)
-        self.dense = tfa.layers.SpectralNormalization(tf.keras.layers.Dense(2 * self.units, activation="sigmoid"))
+        if spectral_normalization:
+            self.dense = tfa.layers.SpectralNormalization(tf.keras.layers.Dense(2 * self.units, activation="sigmoid"))
+        elif spectral_normalization == False:
+            self.dense = tf.keras.layers.Dense(2 * self.units, activation="sigmoid")
         self.eps = eps
 
     def call(self, x):
