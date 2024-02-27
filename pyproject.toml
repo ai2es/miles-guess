@@ -15,7 +15,7 @@ dependencies = [
     "matplotlib",
     "pandas",
     "xarray",
-    "keras",
+    "keras>3.0",
     "scikit-learn",
     "netcdf4",
     "pyyaml",
