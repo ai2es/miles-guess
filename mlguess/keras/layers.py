@@ -10,7 +10,7 @@ class DenseNormalGamma(tf.keras.layers.Layer):
     Args:
         units (int): Output size of regression tasks
         name (str): Name of the layer
-        spectral_normalization (Bool): Whether to use Spectral Normalization
+        spectral_normalization (bool): Whether to use Spectral Normalization
         eps (float): Minimum value for evidence (prevents potential division by zero)
 
     Returns:
@@ -19,7 +19,7 @@ class DenseNormalGamma(tf.keras.layers.Layer):
         Make Spectral Normalization an option
     """
     
-    def __init__(self, units, name, spectral_normalization=False, eps=1e-12, **kwargs):
+    def __init__(self, units: int, name: str, spectral_normalization=False, eps=1e-12, **kwargs):
         """ """
         super(DenseNormalGamma, self).__init__(name=name, **kwargs)
         self.units = int(units)
@@ -55,7 +55,7 @@ class DenseNormal(tf.keras.layers.Layer):
     Args:
         units (int): Output size of regression tasks
         name (str): Name of the layer
-        spectral_normalization (Bool): Whether to use Spectral Normalization
+        spectral_normalization (bool): Whether to use Spectral Normalization
         eps (float): Minimum value for evidence (prevents potential division by zero)
 
     Returns:
@@ -63,7 +63,7 @@ class DenseNormal(tf.keras.layers.Layer):
     todo:
         Make Spectral Normalization an option
     """
-    def __init__(self, units, name, spectral_normalization=False, eps=1e-12):
+    def __init__(self, units: int, name: str, spectral_normalization=False, eps=1e-12):
         super(DenseNormal, self).__init__(name=name)
         self.units = int(units)
         if spectral_normalization:
