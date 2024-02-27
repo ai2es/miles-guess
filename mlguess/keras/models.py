@@ -1301,7 +1301,7 @@ def locate_best_model(filepath, metric="val_ave_acc", direction="max"):
     best_c = scores["metric"].index(func(scores["metric"]))
     return scores["best_ensemble"][best_c]
 
-
+# @keras.saving.register_keras_serializable(package="SEALS_keras")
 class CategoricalDNN_keras3(keras.models.Model):
     """
     A Dense Neural Network Model that can support arbitrary numbers of hidden layers.
@@ -1392,6 +1392,8 @@ class CategoricalDNN_keras3(keras.models.Model):
         self.balanced_classes = balanced_classes
         self.steps_per_epoch = steps_per_epoch
         self.outputs = 4
+        self.current_epoch = keras.Variable(initializer=0, dtype='float32', trainable=False)
+
         """
         Create Keras neural network model and compile it.
         Args:
@@ -1428,7 +1430,13 @@ class CategoricalDNN_keras3(keras.models.Model):
         for l in range(1, len(self.model_layers)):
             layer_output = self.model_layers[l](layer_output)
 
+        self.current_epoch.assign_add(1)
         return layer_output
+
+    def get_config(self):
+        base_config = super().get_config()
+        # parameter_config = {hp: getattr(self, hp) for hp in self.hyperparameters}
+        return base_config
 
     @classmethod
     def load_model(cls, conf):
