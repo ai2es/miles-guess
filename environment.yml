@@ -30,4 +30,4 @@ dependencies:
     - hagelslag
     - bridgescaler
     - -e git+https://github.com/ai2es/ptype-physical.git#egg=ptype
-    - -e .
+    - -e --ignore-installed tensorflow .
