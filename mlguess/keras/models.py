@@ -616,7 +616,7 @@ class GaussianRegressorDNN(BaseRegressor):
             metrics,
         )
         self.eps = eps
-        self.loss = gaussian_nll()
+        self.loss = gaussian_nll
 
     def build_neural_network(self, inputs, outputs, last_layer="DenseNormal"):
         """
