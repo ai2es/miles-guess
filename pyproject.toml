@@ -3,7 +3,7 @@ requires = ["setuptools", "setuptools-scm"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "mlguess"
+name = "miles-guess"
 authors = [{name = "John Schreck, David John Gagne, Charlie Becker, Gabrielle Gantos", email = "miles@ucar.edu"}]
 readme = "README.md"
 license = {file = "LICENSE"}
