@@ -9,9 +9,11 @@ Welcome to miles-guess's documentation!
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
-   
-   modules.rst
 
+   install.rst
+   modules.rst
+   notebooks/classifier_example.ipynb
+   notebooks/regression_example.ipynb
 
 Indices and tables
 ==================
