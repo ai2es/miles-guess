@@ -9,7 +9,7 @@ from tensorflow.keras.regularizers import L1, L2, L1L2
 from tensorflow.keras.layers import Dense, LeakyReLU, GaussianNoise, Dropout
 from tensorflow.keras.optimizers import Adam, SGD
 from mlguess.keras.layers import DenseNormalGamma, DenseNormal
-from mlguess.keras.losses import EvidentialRegressionLoss, EvidentialRegressionCoupledLoss, GaussianNLL
+from mlguess.keras.losses import EvidentialRegressionLoss, EvidentialRegressionCoupledLoss, gaussian_nll
 from mlguess.keras.losses import DirichletEvidentialLoss
 from mlguess.keras.callbacks import ReportEpoch
 from imblearn.under_sampling import RandomUnderSampler
@@ -597,7 +597,7 @@ class GaussianRegressorDNN(EvidentialRegressorDNN):
             inputs (int): Number of input predictor variables
             outputs (int): Number of output predictor variables
         """
-        self.loss = GaussianNLL
+        self.loss = gaussian_nll
 
         nn_input = Input(shape=(inputs,), name="input")
         nn_model = nn_input
