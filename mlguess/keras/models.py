@@ -5,9 +5,7 @@ import keras
 import keras.ops as ops
 import numpy as np
 import pandas as pd
-# import tensorflow as tf
 from keras import Input, Model
-# from tensorflow.python.keras import backend as K
 from keras.regularizers import L1, L2, L1L2
 from keras.layers import Dense, LeakyReLU, GaussianNoise, Dropout
 from keras.optimizers import Adam, SGD
@@ -1570,10 +1568,10 @@ class EvidentialRegressorDNN_keras3(keras.models.Model):
     """
     def __init__(
         self,
-        hidden_layers=1,
-        hidden_neurons=4,
+        hidden_layers=2,
+        hidden_neurons=64,
         activation="relu",
-        loss="evidentialReg",
+        # loss="evidentialReg",
         coupling_coef=1.0,  # right now we have alpha = ... v.. so alpha will be coupled in new loss
         evidential_coef=0.05,
         output_activation='linear',
@@ -1581,12 +1579,12 @@ class EvidentialRegressorDNN_keras3(keras.models.Model):
         loss_weights=None,
         use_noise=False,
         noise_sd=0.01,
-        lr=0.001,
+        lr=0.00001,
         use_dropout=False,
         dropout_alpha=0.1,
         batch_size=128,
         epochs=2,
-        kernel_reg="l2",
+        kernel_reg="l22345",
         l1_weight=0.01,
         l2_weight=0.01,
         sgd_momentum=0.9,
@@ -1598,7 +1596,7 @@ class EvidentialRegressorDNN_keras3(keras.models.Model):
         metrics=None,
         eps=1e-7,
         **kwargs):
-
+        super().__init__(**kwargs)
         self.hidden_layers = hidden_layers
         self.hidden_neurons = hidden_neurons
         self.activation = activation
@@ -1608,7 +1606,7 @@ class EvidentialRegressorDNN_keras3(keras.models.Model):
         self.sgd_momentum = sgd_momentum
         self.adam_beta_1 = adam_beta_1
         self.adam_beta_2 = adam_beta_2
-        self.loss = loss
+        # self.loss = loss
         self.loss_weights = loss_weights
         self.lr = lr
         self.kernel_reg = kernel_reg
@@ -1623,15 +1621,14 @@ class EvidentialRegressorDNN_keras3(keras.models.Model):
         self.verbose = verbose
         self.save_path = save_path
         self.model_name = model_name
-        self.model = None
+        # self.model = None
         self.optimizer_obj = None
         self.training_std = None
         self.training_var = []
-        self.metrics = metrics
+        # self.metrics = metrics
         self.eps = eps
         self.ensemble_member_files = []
         self.n_output_params = 4
-        super().__init__(**kwargs)
 
         if self.activation == "leaky":
             self.activation = LeakyReLU()
@@ -1654,7 +1651,7 @@ class EvidentialRegressorDNN_keras3(keras.models.Model):
             if self.use_noise:
                 self.model_layers.append(GaussianNoise(self.noise_sd, name=f"noise_{h:02d}"))
 
-        self.model_layers.append(Dense(self.n_output_params, activation=self.output_activation, name="dense_output"))
+        self.model_layers.append(DenseNormalGamma(self.n_output_params, name="dense_output"))
 
     def call(self, inputs):
 
@@ -1669,7 +1666,6 @@ class EvidentialRegressorDNN_keras3(keras.models.Model):
         base_config = super().get_config()
         # parameter_config = {hp: getattr(self, hp) for hp in self.hyperparameters}
         return base_config
-
 
 
         # self.coupling_coef = coupling_coef
