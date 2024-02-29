@@ -9,7 +9,7 @@ ensemble:
     monte_carlo_passes: 100
 
 data:
-    save_loc: "/glade/p/cisl/aiml/ai2es/surfacelayer/cabauw_derived_data_20210720.csv"
+    # save_loc: "/glade/p/cisl/aiml/ai2es/surfacelayer/cabauw_derived_data_20210720.csv"
     input_cols: [
         'wind_speed:10_m:m_s-1',
         'potential_temperature_skin_change:10_m:K_m-1',
@@ -21,21 +21,21 @@ data:
         'kinematic_sensible_heat_flux:surface:K_m_s-1', 
         'kinematic_latent_heat_flux:surface:g_kg-1_m_s-1'
     ]
-    splitter: "GroupShuffleSplit"
-    scaler_x:
-        type: "quantile"
-        params:
-            copy: true
-            with_mean: true
-            with_std: true
-    scaler_y:
-        type: "symmetric"
-        params:
-            copy: true
-            with_mean: true
-            with_std: true
-    split_col: "day"
-    train_size: 0.9
+    # splitter: "GroupShuffleSplit"
+    # scaler_x:
+    #     type: "quantile"
+    #     params:
+    #         copy: true
+    #         with_mean: true
+    #         with_std: true
+    # scaler_y:
+    #     type: "symmetric"
+    #     params:
+    #         copy: true
+    #         with_mean: true
+    #         with_std: true
+    # split_col: "day"
+    # train_size: 0.9
 
 model:
     hidden_layers: 1
@@ -51,8 +51,8 @@ model:
     use_noise: False
     use_dropout: True
     dropout_alpha: 0.2
-    epochs: 100
-    verbose: 0
+    # epochs: 100
+    # verbose: 0
     
 callbacks:
   EarlyStopping:
