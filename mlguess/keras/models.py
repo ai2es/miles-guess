@@ -18,7 +18,6 @@ from imblearn.tensorflow import balanced_batch_generator
 from collections import defaultdict
 import logging
 
-
 class BaseRegressor(object):
     """
     A base class for regression models.
@@ -1390,7 +1389,7 @@ class CategoricalDNN_keras3(keras.models.Model):
         self.balanced_classes = balanced_classes
         self.steps_per_epoch = steps_per_epoch
         self.outputs = 4
-        self.current_epoch = keras.Variable(initializer=0, dtype='float32', trainable=False)
+        self.current_epoch = keras.Variable(initializer=20, dtype='float32', trainable=False)
 
         """
         Create Keras neural network model and compile it.
@@ -1428,8 +1427,13 @@ class CategoricalDNN_keras3(keras.models.Model):
         for l in range(1, len(self.model_layers)):
             layer_output = self.model_layers[l](layer_output)
 
-        self.current_epoch.assign_add(1)
         return layer_output
+
+    # def fit(self, x, y, epochs):
+    #
+    #     report_epoch_callback = ReportEpoch()
+    #     self.fit(x, y, epochs=epochs)
+
 
     def get_config(self):
         base_config = super().get_config()
@@ -1584,7 +1588,7 @@ class EvidentialRegressorDNN_keras3(keras.models.Model):
         dropout_alpha=0.1,
         batch_size=128,
         epochs=2,
-        kernel_reg="l22345",
+        kernel_reg="l2",
         l1_weight=0.01,
         l2_weight=0.01,
         sgd_momentum=0.9,
