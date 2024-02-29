@@ -16,9 +16,6 @@ jobs:
       with:
         environment-file: environment.yml
         activate-environment: test
-        create-args: >-
-          python=3.10
-          numpy
     - shell: bash -l {0}
       run: |
         pip install --upgrade keras
