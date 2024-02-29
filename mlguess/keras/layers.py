@@ -1,7 +1,9 @@
+import keras
 import keras.layers as layers
 import keras.ops as ops
 
 
+@keras.saving.register_keras_serializable()
 class DenseNormalGamma(layers.Layer):
     """
     Implements dense output layer for a deep evidential regression model.

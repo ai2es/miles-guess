@@ -9,8 +9,8 @@ from sklearn.preprocessing import RobustScaler, MinMaxScaler
 from mlguess.keras.models import BaseRegressor as RegressorDNN
 from mlguess.keras.models import GaussianRegressorDNN
 from mlguess.keras.models import EvidentialRegressorDNN
-from mlguess.keras.models import CategoricalDNN_keras3
-from mlguess.keras.losses import DirichletEvidentialLoss, EvidentialCatLoss
+from mlguess.keras.models import CategoricalDNN_keras3, EvidentialRegressorDNN_keras3
+from mlguess.keras.losses import DirichletEvidentialLoss, EvidentialCatLoss, EvidentialRegLoss
 from keras.models import load_model
 
 class TestModels(unittest.TestCase):
@@ -99,6 +99,19 @@ class TestModels(unittest.TestCase):
         model.fit(x_train, y_train)
         model.save("test_model2.keras")
         load_model("test_model2.keras")
+
+    def test_evi_reg(self):
+
+        x_train = np.random.random(size=(10000, 10)).astype('float32')
+        y_train = np.random.random(size=(10000, 1)).astype('float32')
+        model = EvidentialRegressorDNN_keras3(hidden_layers=2)
+        model.compile(loss=EvidentialRegLoss(0.01), optimizer="adam")
+        model.fit(x_train, y_train)
+        model.save("test_model3.keras")
+        load_model("test_model3.keras")
+
+
+
 
 if __name__ == "__main__":
     unittest.main()
