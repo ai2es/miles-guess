@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "miles-guess"
-authors = [{name = "John Schreck, David John Gagne, Charlie Becker, Gabrielle Gantos", email = "miles@ucar.edu"}]
+authors = [{name = "John Schreck, David John Gagne, Charlie Becker, Gabrielle Gantos", email = "milescore@ucar.edu"}]
 readme = "README.md"
 license = {file = "LICENSE"}
 dynamic = ["version"]
@@ -36,11 +36,13 @@ dependencies = [
     ]
 
 [project.optional-dependencies]
-tensorflow = ["tensorflow>=2.12"]
+tensorflow = ["tensorflow==2.16.0rc0"]
 
-tensorflow_gpu = ["tensorflow[and-cuda]"]
+tensorflow_gpu = ["tensorflow[and-cuda]==2.16.0rc0"]
 
 torch = ["torch"]
+
+jax = ["jax"]
 
 
 
