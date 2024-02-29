@@ -2,14 +2,13 @@ import os
 import sys
 import glob
 import keras
+import keras.ops as ops
 import numpy as np
 import pandas as pd
-import tensorflow as tf
-from tensorflow.keras import Input, Model
-from tensorflow.python.keras import backend as K
-from tensorflow.keras.regularizers import L1, L2, L1L2
-from tensorflow.keras.layers import Dense, LeakyReLU, GaussianNoise, Dropout
-from tensorflow.keras.optimizers import Adam, SGD
+from keras import Input, Model
+from keras.regularizers import L1, L2, L1L2
+from keras.layers import Dense, LeakyReLU, GaussianNoise, Dropout
+from keras.optimizers import Adam, SGD
 from mlguess.keras.layers import DenseNormalGamma, DenseNormal
 from mlguess.keras.losses import EvidentialRegressionLoss, EvidentialRegressionCoupledLoss, gaussian_nll
 from mlguess.keras.losses import DirichletEvidentialLoss
@@ -18,7 +17,6 @@ from imblearn.under_sampling import RandomUnderSampler
 from imblearn.tensorflow import balanced_batch_generator
 from collections import defaultdict
 import logging
-
 
 class BaseRegressor(object):
     """
@@ -248,7 +246,7 @@ class BaseRegressor(object):
         if not os.path.exists(self.save_path):
             os.makedirs(self.save_path)
         model_path = os.path.join(self.save_path, self.model_name)
-        tf.keras.models.save_model(
+        keras.models.save_model(
             self.model, model_path, save_format="h5"
         )
         logging.info(f"Saved model to {model_path}")
@@ -311,9 +309,9 @@ class BaseRegressor(object):
         """ Compute the MAE """
         num_splits = y_pred.shape[-1]
         if num_splits == 4:
-            mu, _, _, _ = tf.split(y_pred, num_splits, axis=-1)
+            mu, _, _, _ = ops.split(y_pred, num_splits, axis=-1)
         elif num_splits == 2:
-            mu, _ = tf.split(y_pred, num_splits, axis=-1)
+            mu, _ = ops.split(y_pred, num_splits, axis=-1)
         else:
             mu = y_pred  # Assuming num_splits is 1
         return keras.metrics.mean_absolute_error(y_true, mu)
@@ -322,9 +320,9 @@ class BaseRegressor(object):
         """ Compute the MSE """
         num_splits = y_pred.shape[-1]
         if num_splits == 4:
-            mu, _, _, _ = tf.split(y_pred, num_splits, axis=-1)
+            mu, _, _, _ = ops.split(y_pred, num_splits, axis=-1)
         elif num_splits == 2:
-            mu, _ = tf.split(y_pred, num_splits, axis=-1)
+            mu, _ = ops.split(y_pred, num_splits, axis=-1)
         else:
             mu = y_pred  # Assuming num_splits is 1
 
@@ -1041,7 +1039,7 @@ class CategoricalDNN(object):
         else:
             self.kernel_reg = None
 
-        self.model = tf.keras.models.Sequential()
+        self.model = keras.models.Sequential()
         self.model.add(
             Dense(
                 inputs,
@@ -1116,7 +1114,7 @@ class CategoricalDNN(object):
         outputs = y_train.shape[-1]
 
         if self.loss == "evidential":
-            this_epoch_num = K.variable(value=0)
+            this_epoch_num = keras.variable(value=0)
             report_epoch_callback = ReportEpoch(self.annealing_coeff, this_epoch_num)
             self.callbacks.insert(0, report_epoch_callback)
             self.loss = DirichletEvidentialLoss(
@@ -1210,7 +1208,7 @@ class CategoricalDNN(object):
         return model_class
 
     def save_model(self, model_path):
-        tf.keras.models.save_model(self.model, model_path, save_format="h5")
+        keras.models.save_model(self.model, model_path, save_format="h5")
         return
 
     def predict(self, x, batch_size=None):
@@ -1229,7 +1227,7 @@ class CategoricalDNN(object):
             [
                 np.vstack(
                     [
-                        self.model(tf.expand_dims(lx, axis=-1), training=True)
+                        self.model(ops.expand_dims(lx, axis=-1), training=True)
                         for lx in np.array_split(x, x.shape[0] // _batch_size)
                     ]
                 )
@@ -1278,9 +1276,9 @@ class CategoricalDNN(object):
     def predict_uncertainty(self, x):
         num_classes = self.model.output_shape[-1]
         y_pred = self.predict(x)
-        evidence = tf.nn.relu(y_pred)
+        evidence = ops.relu(y_pred)
         alpha = evidence + 1
-        S = tf.keras.backend.sum(alpha, axis=1, keepdims=True)
+        S = ops.sum(alpha, axis=1, keepdims=True)
         u = num_classes / S
         prob = alpha / S
         epistemic = prob * (1 - prob) / (S + 1)
@@ -1301,7 +1299,6 @@ def locate_best_model(filepath, metric="val_ave_acc", direction="max"):
     best_c = scores["metric"].index(func(scores["metric"]))
     return scores["best_ensemble"][best_c]
 
-# @keras.saving.register_keras_serializable(package="SEALS_keras")
 class CategoricalDNN_keras3(keras.models.Model):
     """
     A Dense Neural Network Model that can support arbitrary numbers of hidden layers.
@@ -1392,7 +1389,7 @@ class CategoricalDNN_keras3(keras.models.Model):
         self.balanced_classes = balanced_classes
         self.steps_per_epoch = steps_per_epoch
         self.outputs = 4
-        self.current_epoch = keras.Variable(initializer=0, dtype='float32', trainable=False)
+        self.current_epoch = keras.Variable(initializer=20, dtype='float32', trainable=False)
 
         """
         Create Keras neural network model and compile it.
@@ -1430,8 +1427,13 @@ class CategoricalDNN_keras3(keras.models.Model):
         for l in range(1, len(self.model_layers)):
             layer_output = self.model_layers[l](layer_output)
 
-        self.current_epoch.assign_add(1)
         return layer_output
+
+    # def fit(self, x, y, epochs):
+    #
+    #     report_epoch_callback = ReportEpoch()
+    #     self.fit(x, y, epochs=epochs)
+
 
     def get_config(self):
         base_config = super().get_config()
@@ -1472,7 +1474,7 @@ class CategoricalDNN_keras3(keras.models.Model):
         return model_class
 
     def save_model(self, model_path):
-        tf.keras.models.save_model(self.model, model_path, save_format="h5")
+        keras.models.save_model(self.model, model_path, save_format="h5")
         return
 
 
@@ -1487,7 +1489,7 @@ class CategoricalDNN_keras3(keras.models.Model):
             [
                 np.vstack(
                     [
-                        self.model(tf.expand_dims(lx, axis=-1), training=True)
+                        self.model(ops.expand_dims(lx, axis=-1), training=True)
                         for lx in np.array_split(x, x.shape[0] // _batch_size)
                     ]
                 )
@@ -1536,11 +1538,213 @@ class CategoricalDNN_keras3(keras.models.Model):
     def predict_uncertainty(self, x):
         num_classes = self.model.output_shape[-1]
         y_pred = self.predict(x)
-        evidence = tf.nn.relu(y_pred)
+        evidence = ops.relu(y_pred)
         alpha = evidence + 1
-        S = tf.keras.backend.sum(alpha, axis=1, keepdims=True)
+        S = ops.sum(alpha, axis=1, keepdims=True)
         u = num_classes / S
         prob = alpha / S
         epistemic = prob * (1 - prob) / (S + 1)
         aleatoric = prob - prob**2 - epistemic
         return prob, u, aleatoric, epistemic
+
+class EvidentialRegressorDNN_keras3(keras.models.Model):
+    """
+    A Dense Neural Network Model that can support arbitrary numbers of hidden layers
+    and provides evidential uncertainty estimation.
+    Inherits from BaseRegressor.
+
+    Attributes:
+        hidden_layers: Number of hidden layers.
+        hidden_neurons: Number of neurons in each hidden layer.
+        activation: Type of activation function.
+        optimizer: Name of optimizer or optimizer object.
+        loss: Name of loss function or loss object.
+        use_noise: Whether additive Gaussian noise layers are included in the network.
+        noise_sd: The standard deviation of the Gaussian noise layers.
+        use_dropout: Whether Dropout layers are added to the network.
+        dropout_alpha: Proportion of neurons randomly set to 0.
+        batch_size: Number of examples per batch.
+        epochs: Number of epochs to train.
+        verbose: Level of detail to provide during training.
+        model: Keras Model object.
+        evidential_coef: Evidential regularization coefficient.
+        metrics: Optional list of metrics to monitor during training.
+    """
+    def __init__(
+        self,
+        hidden_layers=2,
+        hidden_neurons=64,
+        activation="relu",
+        # loss="evidentialReg",
+        coupling_coef=1.0,  # right now we have alpha = ... v.. so alpha will be coupled in new loss
+        evidential_coef=0.05,
+        output_activation='linear',
+        optimizer="adam",
+        loss_weights=None,
+        use_noise=False,
+        noise_sd=0.01,
+        lr=0.00001,
+        use_dropout=False,
+        dropout_alpha=0.1,
+        batch_size=128,
+        epochs=2,
+        kernel_reg="l2",
+        l1_weight=0.01,
+        l2_weight=0.01,
+        sgd_momentum=0.9,
+        adam_beta_1=0.9,
+        adam_beta_2=0.999,
+        verbose=0,
+        save_path=".",
+        model_name="model.h5",
+        metrics=None,
+        eps=1e-7,
+        **kwargs):
+        super().__init__(**kwargs)
+        self.hidden_layers = hidden_layers
+        self.hidden_neurons = hidden_neurons
+        self.activation = activation
+        self.output_activation = output_activation
+        self.optimizer = optimizer
+        self.optimizer_obj = None
+        self.sgd_momentum = sgd_momentum
+        self.adam_beta_1 = adam_beta_1
+        self.adam_beta_2 = adam_beta_2
+        # self.loss = loss
+        self.loss_weights = loss_weights
+        self.lr = lr
+        self.kernel_reg = kernel_reg
+        self.l1_weight = l1_weight
+        self.l2_weight = l2_weight
+        self.batch_size = batch_size
+        self.use_noise = use_noise
+        self.noise_sd = noise_sd
+        self.use_dropout = use_dropout
+        self.dropout_alpha = dropout_alpha
+        self.epochs = epochs
+        self.verbose = verbose
+        self.save_path = save_path
+        self.model_name = model_name
+        # self.model = None
+        self.optimizer_obj = None
+        self.training_std = None
+        self.training_var = []
+        # self.metrics = metrics
+        self.eps = eps
+        self.ensemble_member_files = []
+        self.n_output_params = 4
+
+        if self.activation == "leaky":
+            self.activation = LeakyReLU()
+        if self.kernel_reg == "l1":
+            self.kernel_reg = L1(self.l1_weight)
+        elif self.kernel_reg == "l2":
+            self.kernel_reg = L2(self.l2_weight)
+        elif self.kernel_reg == "l1_l2":
+            self.kernel_reg = L1L2(self.l1_weight, self.l2_weight)
+        else:
+            self.kernel_reg = None
+        self.model_layers = []
+        for h in range(self.hidden_layers):
+            self.model_layers.append(Dense(self.hidden_neurons,
+                                           activation=self.activation,
+                                           kernel_regularizer=self.kernel_reg,
+                                           name=f"dense_{h:02d}"))
+            if self.use_dropout:
+                self.model_layers.append(Dropout(self.dropout_alpha, name=f"dropout_{h:02d}"))
+            if self.use_noise:
+                self.model_layers.append(GaussianNoise(self.noise_sd, name=f"noise_{h:02d}"))
+
+        self.model_layers.append(DenseNormalGamma(self.n_output_params, name="dense_output"))
+
+    def call(self, inputs):
+
+        layer_output = self.model_layers[0](inputs)
+
+        for l in range(1, len(self.model_layers)):
+            layer_output = self.model_layers[l](layer_output)
+
+        return layer_output
+
+    def get_config(self):
+        base_config = super().get_config()
+        # parameter_config = {hp: getattr(self, hp) for hp in self.hyperparameters}
+        return base_config
+
+
+        # self.coupling_coef = coupling_coef
+        # self.evidential_coef = evidential_coef
+        # self.eps = eps
+        #
+        # if (
+        #     loss == "evidentialReg"
+        # ):  # retains backwards compatibility since default without loss arg is original loss
+        #     self.loss = EvidentialRegressionLoss(coeff=self.evidential_coef)
+        # elif (
+        #     loss == "evidentialFix"
+        # ):  # by default we do not regularize this loss as per meinert and lavin
+        #     self.loss = EvidentialRegressionCoupledLoss(
+        #         coeff=self.evidential_coef, r=self.coupling_coef
+        #     )
+        # else:
+            # raise ValueError("loss needs to be one of 'evidentialReg' or 'evidentialFix'")
+
+        # logging.info(f"Using loss: {loss}")
+
+    def calc_uncertainties(self, preds, y_scaler=None):
+        mu, v, alpha, beta = np.split(preds, 4, axis=-1)
+
+        if isinstance(self.loss, EvidentialRegressionCoupledLoss):
+            v = (
+                2 * (alpha - 1) / self.coupling_coef
+            )  # need to couple this way otherwise alpha could be negative
+        aleatoric = beta / (alpha - 1)
+        epistemic = beta / (v * (alpha - 1))
+
+        if len(mu.shape) == 1:
+            mu = np.expand_dims(mu, 1)
+            aleatoric = np.expand_dims(aleatoric, 1)
+            epistemic = np.expand_dims(epistemic, 1)
+
+        if y_scaler:
+            mu = y_scaler.inverse_transform(mu)
+
+        for i in range(mu.shape[-1]):
+            aleatoric[:, i] *= self.training_var[i]
+            epistemic[:, i] *= self.training_var[i]
+
+        return mu, aleatoric, epistemic
+
+    def predict_uncertainty(self, x, scaler=None, batch_size=None):
+        _batch_size = self.batch_size if batch_size is None else batch_size
+        y_out = self.model.predict(x, batch_size=_batch_size)
+        y_out = self.calc_uncertainties(
+            y_out, scaler
+        )  # todo calc uncertainty for coupled params
+        return y_out
+
+    def predict_dist_params(self, x, y_scaler=None, batch_size=None):
+        _batch_size = self.batch_size if batch_size is None else batch_size
+        preds = self.model.predict(x, batch_size=_batch_size)
+        mu, v, alpha, beta = np.split(preds, 4, axis=-1)
+        if isinstance(self.loss, EvidentialRegressionCoupledLoss):
+            v = (
+                2 * (alpha - 1) / self.coupling_coef
+            )  # need to couple this way otherwise alpha could be negative
+
+        if mu.shape[-1] == 1:
+            mu = np.expand_dims(mu, 1)
+        if y_scaler is not None:
+            mu = y_scaler.inverse_transform(mu)
+
+        return mu, v, alpha, beta
+
+    def predict_ensemble(
+        self, x_test, scaler=None, batch_size=None
+    ):
+        return super().predict_ensemble(x_test, scaler=scaler, batch_size=batch_size, num_outputs=3)
+
+    def predict_monte_carlo(
+        self, x_test, forward_passes, scaler=None, batch_size=None
+    ):
+        return super().predict_monte_carlo(x_test, forward_passes, scaler=scaler, batch_size=batch_size, num_outputs=3)

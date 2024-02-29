@@ -75,7 +75,7 @@ class DirichletEvidentialLoss(keras.losses.Loss):
 
         return ops.mean(A + B + C)
 
-
+@keras.saving.register_keras_serializable()
 def EvidentialCatLoss(evi_coef, current_epoch, class_weights=None):
 
     def calc_kl(alpha):
@@ -93,6 +93,7 @@ def EvidentialCatLoss(evi_coef, current_epoch, class_weights=None):
             kl = (ops.sum((alpha - beta) * (dg1 - dg0), axis=1, keepdims=True) + lnB + lnB_uni)
         return kl
 
+    @keras.saving.register_keras_serializable()
     def loss(y, y_pred):
         evidence = ops.relu(y_pred)
         alpha = evidence + 1
@@ -159,6 +160,45 @@ class EvidentialRegressionLoss(keras.losses.Loss):
         config.update({"coeff": self.coeff})
         return config
 
+@keras.saving.register_keras_serializable()
+def EvidentialRegLoss(evi_coef):
+    """
+    Loss function for an evidential regression model. The total loss is the Negative Log Likelihood of the
+    Normal Inverse Gamma summed with the error and scaled by the evidential coefficient. The coefficient has a strong
+    influence on the uncertainty predictions (less so for the predictions themselves) of the model and must be tuned
+    for individual datasets.
+    Loss = loss_nll + coeff * loss_reg
+    Args:
+        coeff (float): Evidential Coefficient
+    """
+
+    def nig_nll(y, gamma, v, alpha, beta, reduce=True):
+        v = ops.maximum(v, keras.backend.epsilon())
+        twoBlambda = 2 * beta * (1 + v)
+        nll = (0.5 * ops.log(np.pi / v)
+               - alpha * ops.log(twoBlambda)
+               + (alpha + 0.5) * ops.log(v * (y - gamma) ** 2 + twoBlambda)
+               + lgamma(alpha)
+               - lgamma(alpha + 0.5))
+
+        return ops.mean(nll) if reduce else nll
+
+    def nig_reg(y, gamma, v, alpha, reduce=True):
+        error = ops.abs(y - gamma)
+        evi = 2 * v + alpha
+        reg = error * evi
+
+        return ops.mean(reg) if reduce else reg
+    @keras.saving.register_keras_serializable()
+    def loss(y, y_pred):
+
+        gamma, v, alpha, beta = ops.split(y_pred, 4, axis=-1)
+        loss_nll = nig_nll(y, gamma, v, alpha, beta)
+        loss_reg = nig_reg(y, gamma, v, alpha)
+
+        return loss_nll + evi_coef * loss_reg
+
+    return loss
 
 def gaussian_nll(y, y_pred, reduce=True):
     """
