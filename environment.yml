@@ -25,6 +25,7 @@ dependencies:
   - pyarrow
   - imbalanced-learn
   - pip:
+    - tensorflow
     - keras
     - echo-opt
     - hagelslag
