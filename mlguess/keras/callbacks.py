@@ -1,20 +1,20 @@
-from tensorflow.python.keras import backend as K
-from tensorflow.python.keras.callbacks import (
+from keras import backend as K
+from keras.callbacks import (
     Callback,
     ModelCheckpoint,
     CSVLogger,
     EarlyStopping,
 )
-import tensorflow as tf
-from tensorflow.python.keras.callbacks import ReduceLROnPlateau, LearningRateScheduler
+from keras.callbacks import ReduceLROnPlateau, LearningRateScheduler
 from typing import List, Dict
 import logging
 from functools import partial
 import math
 import os
+import keras
+import keras.ops as ops
 
 logger = logging.getLogger(__name__)
-
 
 def get_callbacks(config: Dict[str, str], path_extend=False) -> List[Callback]:
     callbacks = []
@@ -73,17 +73,10 @@ class LearningRateTracker(Callback):
         logs["lr"] = K.get_value(self.model.optimizer.lr)
 
 
-class ReportEpoch(tf.keras.callbacks.Callback):
-    def __init__(self, annealing_coef, this_epoch_num):
-        super(ReportEpoch, self).__init__()
-        self.this_epoch = 0
-        self.annealing_coef = annealing_coef
-        self.this_epoch_num = this_epoch_num
+class ReportEpoch(keras.callbacks.Callback):
+    def __init__(self, epoch_var):
+        self.epoch_var = epoch_var
 
     def on_epoch_begin(self, epoch, logs=None):
-        if logs is None:
-            logs = {}
-        self.this_epoch += 1
-        K.set_value(
-            self.this_epoch_num, self.this_epoch
-        )
+        self.epoch_var.assign_add(1)
+
