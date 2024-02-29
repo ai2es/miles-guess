@@ -57,8 +57,7 @@ class TestModels(unittest.TestCase):
         assert p_with_uncertainty.shape[-1] == 3
         assert p_without_uncertainty.shape[-1] == 4
         model.save("test_evi_regression.keras")
-        # load_model("test_evi_regression.keras")
-
+        load_model("test_evi_regression.keras")
 
 if __name__ == "__main__":
     unittest.main()
