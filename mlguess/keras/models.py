@@ -139,11 +139,11 @@ class CategoricalDNN(keras.models.Model):
         aleatoric = prob - prob**2 - epistemic
         return prob, u, aleatoric, epistemic
 
-     def get_config(self):
+    def get_config(self):
 
-            base_config = super().get_config()
-            parameter_config = {hp: getattr(self, hp) for hp in self.hyperparameters}
-            return {**base_config, **parameter_config}
+        base_config = super().get_config()
+        parameter_config = {hp: getattr(self, hp) for hp in self.hyperparameters}
+        return {**base_config, **parameter_config}
 
 class EvidentialRegressorDNN(keras.models.Model):
     """
@@ -171,7 +171,7 @@ class EvidentialRegressorDNN(keras.models.Model):
     def __init__(self, hidden_layers=2, hidden_neurons=64, activation="relu", optimizer="adam", loss_weights=None,
                  use_noise=False, noise_sd=0.01, lr=0.00001, use_dropout=False, dropout_alpha=0.1, batch_size=128,
                  epochs=2, kernel_reg=None, l1_weight=0.01, l2_weight=0.01, sgd_momentum=0.9, adam_beta_1=0.9,
-                 adam_beta_2=0.999, epsilon=1e-7, verbose=1, **kwargs):
+                 adam_beta_2=0.999, epsilon=1e-7, verbose=1, training_var=None, **kwargs):
 
         super().__init__(**kwargs)
         self.hidden_layers = hidden_layers
@@ -195,15 +195,15 @@ class EvidentialRegressorDNN(keras.models.Model):
         self.epochs = epochs
         self.verbose = verbose
         self.optimizer_obj = None
-        self.training_var = None
+        self.training_var = training_var
         self.epsilon = epsilon
         self.n_output_tasks = 1
         self.N_OUTPUT_PARAMS = 4
         self.hyperparameters = ["hidden_layers", "hidden_neurons", "activation", "training_var",
-                                "optimizer", "sgd_momentum", "adam_beta_1", "adam_beta_2", "epsilon", "loss",
-                                "loss_weights", "annealing_coeff", "lr", "kernel_reg", "l1_weight", "l2_weight",
+                                "optimizer", "sgd_momentum", "adam_beta_1", "adam_beta_2", "epsilon",
+                                "loss_weights", "lr", "kernel_reg", "l1_weight", "l2_weight",
                                 "batch_size", "use_noise", "noise_sd", "use_dropout", "dropout_alpha", "epochs",
-                                "callbacks", "decay", "verbose", "random_state", "n_classes"]
+                                "verbose", "n_output_tasks", "epsilon"]
 
         if self.activation == "leaky":
             self.activation = LeakyReLU()
