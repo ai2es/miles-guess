@@ -233,8 +233,6 @@ class BaseRegressor(object):
             validation_data=validation_data,
             initial_epoch=initial_epoch,
             steps_per_epoch=steps_per_epoch,
-            workers=workers,
-            use_multiprocessing=use_multiprocessing,
             shuffle=shuffle,
             **kwargs,
         )
