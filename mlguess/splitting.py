@@ -24,7 +24,7 @@ def load_splitter(splitter, n_splits=1, random_state=1000, train_size=0.9):
         )
     elif splitter == "StratifiedKFold":
         return ms.StratifiedKFold(
-            n_splits=n_splits, random_state=random_state, train_size=train_size
+            n_splits=n_splits, random_state=random_state
         )
     elif splitter == "StratifiedShuffleSplit":
         return ms.StratifiedShuffleSplit(
@@ -32,11 +32,11 @@ def load_splitter(splitter, n_splits=1, random_state=1000, train_size=0.9):
         )
     elif splitter == "StratifiedGroupKFold":
         return ms.StratifiedGroupKFold(
-            n_splits=n_splits, random_state=random_state, train_size=train_size
+            n_splits=n_splits, random_state=random_state,
         )
     elif splitter == "TimeSeriesSplit":
         return ms.TimeSeriesSplit(
-            n_splits=n_splits, random_state=random_state, train_size=train_size
+            n_splits=n_splits,
         )
     else:
         raise OSError(

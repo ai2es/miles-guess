@@ -10,11 +10,11 @@ import optuna
 import warnings
 import numpy as np
 import pandas as pd
-import tensorflow as tf
+import keras
 from argparse import ArgumentParser
 
 from keras import backend as K
-from mlguess.keras.models import BaseRegressor as RegressorDNN
+from mlguess.keras.deprecated.models import BaseRegressor as RegressorDNN
 from mlguess.keras.callbacks import get_callbacks
 from mlguess.splitting import load_splitter
 from mlguess.regression_uq import compute_results
@@ -285,7 +285,7 @@ def trainer(conf, trial=False, mode="single"):
                         results_dict[k].append(v)
 
             del model
-            tf.keras.backend.clear_session()
+            keras.utils.clear_session()
             gc.collect()
 
         if mode == "multi_ensemble":

@@ -1,9 +1,9 @@
 # MILES-Guess
 Generalized Uncertainty for Earth System Science (GUESS)
 
-Developed by the Machine Ingetration and Learning for Earth Systems (MILES) group at the National Center for Atmospheric Research (NCAR), Boulder CO, USA
+Developed by the Machine Ingetration and Learning for Earth Systems (MILES) group at the NSF National Center for Atmospheric Research (NCAR), Boulder CO, USA
 
-## Contributers 
+## Contributors 
 * John Schreck
 * David John Gagne
 * Charlie Becker
@@ -11,6 +11,19 @@ Developed by the Machine Ingetration and Learning for Earth Systems (MILES) grou
 * Dhamma Kimpara
 * Thomas Martin
 
+## Documentation
+Full documentation is [here](https://miles-guess.readthedocs.io/en/latest/).
+
+## Quick Setup
+
+Install in your Python environment with the following command:
+```bash
+pip install miles-guess
+```
+If you want to install a particular backend (tensorflow, tensorflow_gpu, torch, jax): 
+```bash
+pip install miles-guess[<backend>]
+```
 ## Setup from Scratch
 
 Install the Miniconda Python installer available
@@ -30,7 +43,7 @@ conda activate guess`
 
 Create a conda environment for Casper/Derecho users including Tensorflow 2.15 with GPU support.
 ```bash
-mamba env create -f environment_casper.yml`
+mamba env create -f environment_gpu.yml`
 conda activate guess
 ```
 
