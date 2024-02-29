@@ -11,7 +11,7 @@ Welcome to miles-guess's documentation!
    :caption: Contents:
 
    install.rst
-   modules.rst
+   mlguess.rst
    notebooks/classifier_example.ipynb
    notebooks/regression_example.ipynb
 
