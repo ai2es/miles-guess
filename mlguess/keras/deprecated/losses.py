@@ -1,4 +1,5 @@
 import numpy as np
+import logging
 import keras
 import keras.ops as ops
 
@@ -12,51 +13,69 @@ elif backend == "torch":
     from torch.special import digamma
     from torch import lgamma
 
-@keras.saving.register_keras_serializable()
-def evidential_cat_loss(evi_coef, epoch_callback, class_weights=None):
 
-    def calc_kl(alpha):
-        beta = ops.ones(shape=(1, alpha.shape[1]), dtype="float32")
+class DirichletEvidentialLoss(keras.losses.Loss):
+    """
+    Loss function for an evidential categorical model.
+    Args:
+        callback (list): List of callbacks.
+        name (str): reference name
+        this_epoch_num (int):  Epoch callback
+        class_weights (list): List of class weights (experimental)
+    """
+    def __init__(self, callback=None, name="dirichlet", this_epoch_num=None, class_weights=None):
+
+        super().__init__()
+        self.callback = callback
+        self.__name__ = name
+        self.class_weights = class_weights
+        self.this_epoch_num = this_epoch_num
+        if self.class_weights:
+            logging.warning("The application of class weights to this loss is experimental.")
+
+    def kl(self, alpha):
+        beta = ops.ones((1, alpha.shape[1]), dtype="float32")
         S_alpha = ops.sum(alpha, axis=1, keepdims=True)
         S_beta = ops.sum(beta, axis=1, keepdims=True)
-        lnB = lgamma(S_alpha) - ops.sum(lgamma(alpha), axis=1, keepdims=True)
-        lnB_uni = ops.sum(lgamma(beta), axis=1, keepdims=True) - lgamma(S_beta)
+        lnB = lgamma(S_alpha) - ops.sum(
+            lgamma(alpha), axis=1, keepdims=True
+        )
+        lnB_uni = ops.sum(
+            lgamma(beta), axis=1, keepdims=True
+        ) - lgamma(S_beta)
+
         dg0 = digamma(S_alpha)
         dg1 = digamma(alpha)
-        if class_weights:
-            kl = (ops.sum(class_weights * (alpha - beta) * (dg1 - dg0), axis=1, keepdims=True) + lnB +
+
+        if self.class_weights:
+            kl = (ops.sum(self.class_weights * (alpha - beta) * (dg1 - dg0), axis=1, keepdims=True) + lnB +
                   lnB_uni)
         else:
             kl = (ops.sum((alpha - beta) * (dg1 - dg0), axis=1, keepdims=True) + lnB + lnB_uni)
         return kl
 
-    @keras.saving.register_keras_serializable()
-    def loss(y, y_pred):
-        current_epoch = epoch_callback.epoch_var
-        evidence = ops.relu(y_pred)
+    def __call__(self, y, output, sample_weight=None):
+        evidence = ops.relu(output)
         alpha = evidence + 1
-        s = ops.sum(alpha, axis=1, keepdims=True)
-        m = alpha / s
 
-        if class_weights:
-            a = ops.sum(class_weights * (y - m) ** 2, axis=1, keepdims=True)
-            b = ops.sum(class_weights * alpha * (s - alpha) / (s * s * (s + 1)), axis=1, keepdims=True)
+        S = ops.sum(alpha, axis=1, keepdims=True)
+        m = alpha / S
+
+        if self.class_weights:
+            A = ops.sum(self.class_weights * (y - m) ** 2, axis=1, keepdims=True)
+            B = ops.sum(self.class_weights * alpha * (S - alpha) / (S * S * (S + 1)), axis=1, keepdims=True)
         else:
-            a = ops.sum((y - m) ** 2, axis=1, keepdims=True)
-            b = ops.sum(alpha * (s - alpha) / (s * s * (s + 1)), axis=1, keepdims=True)
+            A = ops.sum((y - m) ** 2, axis=1, keepdims=True)
+            B = ops.sum(alpha * (S - alpha) / (S * S * (S + 1)), axis=1, keepdims=True)
 
-        annealing_coef = ops.minimum(1.0, current_epoch / evi_coef)
+        annealing_coef = ops.minimum(1.0, self.this_epoch_num / self.callback.annealing_coef)
         alpha_hat = y + (1 - y) * alpha
-        c = annealing_coef * calc_kl(alpha_hat)
-        c = ops.mean(c, axis=1)
+        C = annealing_coef * self.KL(alpha_hat)
+        C = ops.mean(C, axis=1)
 
-        return ops.mean(a + b + c)
+        return ops.mean(A + B + C)
 
-    return loss
-
-
-@keras.saving.register_keras_serializable()
-def evidential_reg_loss(evi_coef):
+class EvidentialRegressionLoss(keras.losses.Loss):
     """
     Loss function for an evidential regression model. The total loss is the Negative Log Likelihood of the
     Normal Inverse Gamma summed with the error and scaled by the evidential coefficient. The coefficient has a strong
@@ -66,8 +85,11 @@ def evidential_reg_loss(evi_coef):
     Args:
         coeff (float): Evidential Coefficient
     """
+    def __init__(self, coeff=1.0):
+        super(EvidentialRegressionLoss, self).__init__()
+        self.coeff = coeff
 
-    def nig_nll(y, gamma, v, alpha, beta, reduce=True):
+    def nig_nll(self, y, gamma, v, alpha, beta, reduce=True):
         v = ops.maximum(v, keras.backend.epsilon())
         twoBlambda = 2 * beta * (1 + v)
         nll = (0.5 * ops.log(np.pi / v)
@@ -78,22 +100,24 @@ def evidential_reg_loss(evi_coef):
 
         return ops.mean(nll) if reduce else nll
 
-    def nig_reg(y, gamma, v, alpha, reduce=True):
+    def nig_reg(self, y, gamma, v, alpha, reduce=True):
         error = ops.abs(y - gamma)
         evi = 2 * v + alpha
         reg = error * evi
 
         return ops.mean(reg) if reduce else reg
-    @keras.saving.register_keras_serializable()
-    def loss(y, y_pred):
 
-        gamma, v, alpha, beta = ops.split(y_pred, 4, axis=-1)
-        loss_nll = nig_nll(y, gamma, v, alpha, beta)
-        loss_reg = nig_reg(y, gamma, v, alpha)
+    def call(self, y_true, evidential_output):
+        gamma, v, alpha, beta = ops.split(evidential_output, 4, axis=-1)
+        loss_nll = self.nig_nll(y_true, gamma, v, alpha, beta)
+        loss_reg = self.nig_reg(y_true, gamma, v, alpha)
 
-        return loss_nll + evi_coef * loss_reg
+        return loss_nll + self.coeff * loss_reg
 
-    return loss
+    def get_config(self):
+        config = super(EvidentialRegressionLoss, self).get_config()
+        config.update({"coeff": self.coeff})
+        return config
 
 def gaussian_nll(y, y_pred, reduce=True):
     """
@@ -156,6 +180,3 @@ class EvidentialRegressionCoupledLoss(keras.losses.Loss):
         config = super(EvidentialRegressionCoupledLoss, self).get_config()
         config.update({"r": self.r, "coeff": self.coeff})
         return config
-
-
-
