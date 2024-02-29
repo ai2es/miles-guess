@@ -12,14 +12,13 @@ import optuna
 import warnings
 import numpy as np
 import pandas as pd
-import tensorflow as tf
 from argparse import ArgumentParser
 from collections import defaultdict
 from bridgescaler import save_scaler
-
+import keras
 from keras import backend as K
 from mlguess.pit import pit_deviation_skill_score, pit_deviation
-from mlguess.keras.models import GaussianRegressorDNN
+from mlguess.keras.deprecated.models import GaussianRegressorDNN
 from mlguess.keras.callbacks import get_callbacks
 from mlguess.splitting import load_splitter
 from mlguess.regression_uq import compute_results
@@ -332,7 +331,7 @@ def trainer(conf, trial=False, mode="single"):
 
             # Delete old models
             del model
-            tf.keras.backend.clear_session()
+            keras.utils.clear_session()
             gc.collect()
     
     # Save metrics

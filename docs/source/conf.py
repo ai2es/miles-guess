@@ -9,7 +9,7 @@
 project = 'miles-guess'
 copyright = '2024, MILES Group'
 author = 'MILES Group'
-release = '2024.1.1'
+release = '2024.1.0'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
