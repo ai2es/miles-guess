@@ -13,10 +13,10 @@ import optuna
 import pickle
 import numpy as np
 import pandas as pd
-import tensorflow as tf
 from argparse import ArgumentParser
+import keras
 
-from tensorflow.keras import backend as K
+from keras import backend as K
 from mlguess.pit import pit_deviation_skill_score, pit_deviation
 from mlguess.keras.models import EvidentialRegressorDNN
 from mlguess.keras.callbacks import get_callbacks
@@ -153,14 +153,12 @@ def trainer(conf, trial=False):
 
         # load the model
         model = EvidentialRegressorDNN(**model_params)
-        model.build_neural_network(x_train.shape[-1], y_train.shape[-1])
-        model.fit(
+        history = model.fit(
             x_train,
             y_train,
             validation_data=(x_valid, y_valid),
             callbacks=get_callbacks(conf, path_extend="models"),
         )
-        history = model.model.history
         
         ####################
         #
@@ -195,14 +193,13 @@ def trainer(conf, trial=False):
         ########## 
 
         # Save model weights
-        model.model_name = f"models/model_split{data_seed}.h5"
-        model.save_model()
+        model.save(os.path.join(save_loc, "models", f"models/model_split{data_seed}.keras"))
 
         if conf["ensemble"]["n_splits"] > 1 or conf["ensemble"]["n_models"] > 1:
             pd_history = pd.DataFrame.from_dict(history.history)
             pd_history["data_split"] = data_seed
             pd_history.to_csv(
-                os.path.join(conf["save_loc"], "models", f"training_log_split{data_seed}.csv")
+                os.path.join(save_loc, "models", f"training_log_split{data_seed}.csv")
             )
 
         # Save scalers
@@ -226,14 +223,14 @@ def trainer(conf, trial=False):
             best_model_score = optimization_metric
 
             # Break the current symlink
-            if os.path.isfile(os.path.join(save_loc, "models", "best.h5")):
-                os.remove(os.path.join(save_loc, "models", "best.h5"))
+            if os.path.isfile(os.path.join(save_loc, "models", "best.keras")):
+                os.remove(os.path.join(save_loc, "models", "best.keras"))
                 os.remove(os.path.join(save_loc, "models", "best_training_var.txt"))
 
             ensemble_name = f"model_split{data_seed}"
             os.symlink(
-                os.path.join(save_loc, "models", f"{ensemble_name}.h5"),
-                os.path.join(save_loc, "models", "best.h5"),
+                os.path.join(save_loc, "models", f"{ensemble_name}.keras"),
+                os.path.join(save_loc, "models", "best.keras"),
             )
             os.symlink(
                 os.path.join(save_loc, "models", f"{ensemble_name}_training_var.txt"),
@@ -258,7 +255,7 @@ def trainer(conf, trial=False):
         ################
 
         # evaluate on the test holdout split
-        mu, aleatoric, epistemic = model.predict_uncertainty(x_test, scaler=y_scaler)
+        mu, aleatoric, epistemic = model.predict(x_test, return_uncertainties=True)
         total = np.sqrt(aleatoric + epistemic)
         ensemble_mu[data_seed] = mu
         ensemble_ale[data_seed] = aleatoric
@@ -268,7 +265,7 @@ def trainer(conf, trial=False):
             results_dict[k].append(v)
 
         del model
-        tf.keras.backend.clear_session()
+        keras.utils.clear_session()
         gc.collect()
         
     # Use the best model and predict on the three splits
@@ -279,8 +276,7 @@ def trainer(conf, trial=False):
     
     best_metrics = {}
     for (x, y, split, df) in zip(X, Y, splits, dfs):
-        result = best_model.predict_uncertainty(x, scaler=y_scaler)
-        mu, aleatoric, epistemic = result
+        mu, aleatoric, epistemic = best_model.predict(x, return_uncertainties=True)
         total = np.sqrt(aleatoric + epistemic)
         for k, v in regression_metrics(y_scaler.inverse_transform(y), mu, total, split=split).items():
             best_metrics[k] = v

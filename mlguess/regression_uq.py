@@ -2,14 +2,12 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from collections import defaultdict
 import os
-from sklearn.metrics import brier_score_loss
 from mlguess.pit import pit_histogram
 from matplotlib.colors import LogNorm
 import properscoring as ps 
 import pandas as pd
 import numpy as np
 from sklearn.metrics import mean_squared_error, r2_score
-from math import sqrt
 
 
 def compute_results(

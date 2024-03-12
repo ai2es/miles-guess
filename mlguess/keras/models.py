@@ -1,12 +1,10 @@
-import os
-import sys
 import keras
 import keras.ops as ops
 import numpy as np
 from keras.regularizers import L1, L2, L1L2
 from keras.layers import Dense, LeakyReLU, GaussianNoise, Dropout
 from mlguess.keras.layers import DenseNormalGamma
-import logging
+import sys
 
 class CategoricalDNN(keras.models.Model):
     """
@@ -38,8 +36,8 @@ class CategoricalDNN(keras.models.Model):
                  optimizer="adam", loss="categorical_crossentropy",loss_weights=None, annealing_coeff=1.0,
                  use_noise=False, noise_sd=0.0, lr=0.001, use_dropout=False, dropout_alpha=0.2, batch_size=128,
                  epochs=2, kernel_reg=None, l1_weight=0.0, l2_weight=0.0, sgd_momentum=0.9, adam_beta_1=0.9,
-                 adam_beta_2=0.999, epsilon=1e-7, decay=0, verbose=0, random_state=1000, callbacks=[],
-                 balanced_classes=0,steps_per_epoch=0, n_classes=2, **kwargs):
+                 adam_beta_2=0.999, epsilon=1e-7, decay=0, verbose=0, random_state=1000, callbacks=None,
+                 balanced_classes=0, steps_per_epoch=0, n_classes=2, **kwargs):
         super().__init__(**kwargs)
         self.hidden_layers = hidden_layers
         self.hidden_neurons = hidden_neurons
@@ -64,7 +62,10 @@ class CategoricalDNN(keras.models.Model):
         self.use_dropout = use_dropout
         self.dropout_alpha = dropout_alpha
         self.epochs = epochs
-        self.callbacks = callbacks
+        if callbacks is None:
+            self.callbacks = []
+        else:
+            self.callbacks = callbacks
         self.decay = decay
         self.verbose = verbose
         self.random_state = random_state
@@ -112,7 +113,7 @@ class CategoricalDNN(keras.models.Model):
 
         return layer_output
 
-    def fit(self, x, y, **kwargs):
+    def fit(self, x=None, y=None, **kwargs):
 
         hist = super().fit(x, y, **kwargs)
 
@@ -123,10 +124,8 @@ class CategoricalDNN(keras.models.Model):
         output = super().predict(x, **kwargs)
         if return_uncertainties:
             return self.calc_uncertainty(output)
-        elif return_uncertainties == False:
-            return output
         else:
-            raise ValueError("return_uncertainties must be a bool")
+            return output
 
     def calc_uncertainty(self, y_pred):
         num_classes = y_pred.shape[-1]
@@ -139,11 +138,39 @@ class CategoricalDNN(keras.models.Model):
         aleatoric = prob - prob**2 - epistemic
         return prob, u, aleatoric, epistemic
 
-    def get_config(self):
+    def predict_dropout(self, x, mc_forward_passes=10, batch_size=None):
+        _batch_size = self.batch_size if batch_size is None else batch_size
+        y_prob = np.stack(
+            [
+                np.vstack(
+                    [
+                        self(ops.expand_dims(lx, axis=-1), training=True)
+                        for lx in np.array_split(x, x.shape[0] // _batch_size)
+                    ]
+                )
+                for _ in range(mc_forward_passes)
+            ]
+        )
+        pred_probs = y_prob.mean(axis=0)
+        epistemic = y_prob.var(axis=0)
+        aleatoric = np.mean(y_prob * (1.0 - y_prob), axis=0)
 
+        # Calculating entropy across multiple MCD forward passes
+        epsilon = sys.float_info.min
+        entropy = -np.sum(
+            pred_probs * np.log(np.maximum(pred_probs, epsilon)), axis=-1
+        )  # shape (n_samples,)
+        # Calculating mutual information across multiple MCD forward passes
+        mutual_info = entropy - np.mean(
+            np.sum(-np.array(y_prob) * np.log(np.maximum(y_prob, epsilon)), axis=-1), axis=0
+        )  # shape (n_samples,)
+        return pred_probs, aleatoric, epistemic, entropy, mutual_info
+
+    def get_config(self):
         base_config = super().get_config()
         parameter_config = {hp: getattr(self, hp) for hp in self.hyperparameters}
         return {**base_config, **parameter_config}
+
 
 class EvidentialRegressorDNN(keras.models.Model):
     """
@@ -237,14 +264,14 @@ class EvidentialRegressorDNN(keras.models.Model):
 
         return layer_output
 
-    def fit(self, x, y, **kwargs):
+    def fit(self, x=None, y=None, **kwargs):
 
         hist = super().fit(x, y, **kwargs)
         self.training_var = np.var(x, axis=-1)
 
         return hist
 
-    def predict(self, x, return_uncertainties=True, batch_size=10000):
+    def predict(self, x, return_uncertainties=True, batch_size=1000, **kwargs):
         """
         Args:
             x: Input data
@@ -258,10 +285,8 @@ class EvidentialRegressorDNN(keras.models.Model):
         output = super().predict(x, batch_size=batch_size)
         if return_uncertainties:
             return self.calc_uncertainties(output)
-        elif return_uncertainties == False:
-            return output
         else:
-            raise ValueError("return_uncertainties must be a bool")
+            return output
 
     def calc_uncertainties(self, preds):
 

@@ -10,8 +10,8 @@ from keras.regularizers import L1, L2, L1L2
 from keras.layers import Dense, LeakyReLU, GaussianNoise, Dropout
 from keras.optimizers import Adam, SGD
 from mlguess.keras.layers import DenseNormalGamma, DenseNormal
-from mlguess.keras.losses import EvidentialRegressionLoss, EvidentialRegressionCoupledLoss, gaussian_nll
-from mlguess.keras.losses import DirichletEvidentialLoss
+from mlguess.keras.deprecated.losses import EvidentialRegressionLoss, EvidentialRegressionCoupledLoss, gaussian_nll
+from mlguess.keras.deprecated.losses import DirichletEvidentialLoss
 from mlguess.keras.callbacks import ReportEpoch
 from imblearn.under_sampling import RandomUnderSampler
 from imblearn.tensorflow import balanced_batch_generator
