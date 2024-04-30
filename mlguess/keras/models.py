@@ -4,8 +4,8 @@ import keras.ops as ops
 import numpy as np
 from keras.regularizers import L1, L2, L1L2
 from keras.layers import Dense, LeakyReLU, GaussianNoise, Dropout
-from mlguess.keras.layers import DenseNormalGamma
-from mlguess.keras.losses import evidential_cat_loss, evidential_reg_loss
+from mlguess.keras.layers import DenseNormalGamma, DenseNormal
+from mlguess.keras.losses import evidential_cat_loss, evidential_reg_loss, gaussian_nll
 from mlguess.keras.callbacks import ReportEpoch
 from keras.optimizers import Adam, SGD
 
@@ -212,7 +212,7 @@ class CategoricalDNN(keras.models.Model):
         return {**base_config, **parameter_config}
 
 
-class EvidentialRegressorDNN(keras.models.Model):
+class RegressorDNN(keras.models.Model):
     """
     A Dense Neural Network Model that can support arbitrary numbers of hidden layers
     and provides evidential uncertainty estimation.
@@ -235,14 +235,16 @@ class EvidentialRegressorDNN(keras.models.Model):
         evidential_coef: Evidential regularization coefficient.
         metrics: Optional list of metrics to monitor during training.
     """
-    def __init__(self, hidden_layers=2, hidden_neurons=64, activation="relu", optimizer="adam", loss_weights=None,
-                 use_noise=False, noise_sd=0.01, lr=0.00001, use_dropout=False, dropout_alpha=0.1, batch_size=128,
-                 epochs=2, kernel_reg=None, l1_weight=0.01, l2_weight=0.01, sgd_momentum=0.9, adam_beta_1=0.9,
-                 adam_beta_2=0.999, epsilon=1e-7, verbose=1, training_var=None, n_output_tasks=1, **kwargs):
+    def __init__(self, hidden_layers=2, hidden_neurons=64, evidential=False, activation="relu", optimizer="adam",
+                 loss_weights=None, use_noise=False, noise_sd=0.01, lr=0.00001, use_dropout=False, dropout_alpha=0.1,
+                 batch_size=128, loss="mse", epochs=2, kernel_reg=None, l1_weight=0.01, l2_weight=0.01,
+                 sgd_momentum=0.9, adam_beta_1=0.9, adam_beta_2=0.999, epsilon=1e-7, verbose=1, training_var=None,
+                 n_inputs=10, n_output_tasks=1, evi_coeff=1.0, uncertainty=False, **kwargs):
 
         super().__init__(**kwargs)
         self.hidden_layers = hidden_layers
         self.hidden_neurons = hidden_neurons
+        self.evidential = evidential
         self.activation = activation
         self.optimizer = optimizer
         self.optimizer_obj = None
@@ -250,6 +252,7 @@ class EvidentialRegressorDNN(keras.models.Model):
         self.adam_beta_1 = adam_beta_1
         self.adam_beta_2 = adam_beta_2
         self.loss_weights = loss_weights
+        self.loss = loss
         self.lr = lr
         self.kernel_reg = kernel_reg
         self.l1_weight = l1_weight
@@ -265,15 +268,19 @@ class EvidentialRegressorDNN(keras.models.Model):
         self.training_var = training_var
         self.epsilon = epsilon
         self.n_output_tasks = n_output_tasks
-        self.N_OUTPUT_PARAMS = 4
-        self.hyperparameters = ["hidden_layers", "hidden_neurons", "activation", "training_var",
+        self.n_inputs = n_inputs
+        self.evi_coeff = evi_coeff
+        self.uncertainty = uncertainty
+        self.N_EVI_OUTPUT_PARAMS = 4
+        self.N_DENSE_NORMAL_OUTPUT_PARAMS = 2
+        self.hyperparameters = ["hidden_layers", "evidential", "hidden_neurons", "activation", "training_var",
                                 "optimizer", "sgd_momentum", "adam_beta_1", "adam_beta_2", "epsilon",
-                                "loss_weights", "lr", "kernel_reg", "l1_weight", "l2_weight",
+                                "loss_weights", "lr", "kernel_reg", "l1_weight", "l2_weight", "loss",
                                 "batch_size", "use_noise", "noise_sd", "use_dropout", "dropout_alpha", "epochs",
-                                "verbose", "n_output_tasks", "epsilon"]
+                                "verbose", "n_inputs", "n_output_tasks", "epsilon", "evi_coeff", "uncertainty"]
 
-        # if self.activation == "leaky":
-        #     self.activation = LeakyReLU()
+        if self.activation == "leaky":
+            self.activation = LeakyReLU()
         if self.kernel_reg == "l1":
             self.kernel_reg = L1(self.l1_weight)
         elif self.kernel_reg == "l2":
@@ -282,7 +289,20 @@ class EvidentialRegressorDNN(keras.models.Model):
             self.kernel_reg = L1L2(self.l1_weight, self.l2_weight)
         else:
             self.kernel_reg = None
+
+        if self.optimizer == "adam":
+            self.optimizer_obj = Adam(learning_rate=self.lr,
+                                      beta_1=self.adam_beta_1,
+                                      beta_2=self.adam_beta_2,
+                                      epsilon=self.epsilon)
+        elif self.optimizer == "sgd":
+            self.optimizer_obj = SGD(learning_rate=self.lr, momentum=self.sgd_momentum)
+
         self.model_layers = []
+        self.model_layers.append(Dense(self.n_inputs,
+                                       activation=self.activation,
+                                       kernel_regularizer=self.kernel_reg,
+                                       name="input_dense"))
         for h in range(self.hidden_layers):
             self.model_layers.append(Dense(self.hidden_neurons,
                                            activation=self.activation,
@@ -293,12 +313,15 @@ class EvidentialRegressorDNN(keras.models.Model):
             if self.use_noise:
                 self.model_layers.append(GaussianNoise(self.noise_sd, name=f"noise_{h:02d}"))
 
-        self.model_layers.append(DenseNormalGamma(self.n_output_tasks, name="dense_output"))
-
+        if self.evidential:
+            self.model_layers.append(DenseNormalGamma(self.n_output_tasks, name="dense_output"))
+        elif self.uncertainty:
+            self.model_layers.append(DenseNormal(self.n_output_tasks, name="dense_output"))
+        else:
+            self.model_layers.append(Dense(self.n_output_tasks, name="dense_output"))
     def call(self, inputs):
 
         layer_output = self.model_layers[0](inputs)
-
         for l in range(1, len(self.model_layers)):
             layer_output = self.model_layers[l](layer_output)
 
@@ -306,7 +329,12 @@ class EvidentialRegressorDNN(keras.models.Model):
 
     def fit(self, x, y, **kwargs):
 
-        hist = super().fit(x, y, **kwargs)
+        if self.evidential:
+            self.loss = evidential_reg_loss(evi_coef=self.evi_coeff)
+        elif self.uncertainty:
+            self.loss = gaussian_nll
+        super().compile(optimizer=self.optimizer_obj, loss=self.loss)
+        hist = super().fit(x, y, epochs=self.epochs, batch_size=self.batch_size, **kwargs)
         self.training_var = np.var(x, axis=-1)
 
         return hist
@@ -322,18 +350,22 @@ class EvidentialRegressorDNN(keras.models.Model):
             If return_uncertainties is True: np.array(mu, aleatoric uncertainty, epistemic uncertainty)
             Else If return_uncertainties is False: np.array(mu, gamma, alpha, beta)
         """
-        output = super().predict(x, batch_size=batch_size)
-        if return_uncertainties:
-            return self.calc_uncertainties(output)
-        elif return_uncertainties == False:
-            return output
+        if type(return_uncertainties) != bool:
+            raise ValueError("return_uncertainties must be a boolean")
+
+        if (not self.evidential) and (not self.uncertainty) and return_uncertainties:
+            raise NotImplementedError("You can only return uncertainty estimates when 'evidential' or 'uncertainty' is"
+                                      " True. Otherwise you can set 'return_uncertainties' to False to return predictions.")
+
+        elif (self.evidential) and return_uncertainties:
+            return self.calc_uncertainties(super().predict(x, batch_size=batch_size))
+
         else:
-            raise ValueError("return_uncertainties must be a bool")
+            return super().predict(x, batch_size=batch_size)
 
     def calc_uncertainties(self, preds):
 
-        mu, v, alpha, beta = np.split(preds, self.N_OUTPUT_PARAMS, axis=-1)
-
+        mu, v, alpha, beta = np.split(preds, self.N_EVI_OUTPUT_PARAMS, axis=-1)
         aleatoric = beta / (alpha - 1)
         epistemic = beta / (v * (alpha - 1))
 
