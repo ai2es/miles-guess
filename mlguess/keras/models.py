@@ -9,8 +9,6 @@ from mlguess.keras.losses import evidential_cat_loss, evidential_reg_loss, gauss
 from mlguess.keras.callbacks import ReportEpoch
 from keras.optimizers import Adam, SGD
 
-import logging
-
 
 @keras.saving.register_keras_serializable()
 class CategoricalDNN(keras.models.Model):
