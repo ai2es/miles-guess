@@ -12,6 +12,7 @@ class TestModels(unittest.TestCase):
         x_train = np.random.random(size=(10000, 10)).astype('float32')
         y_train = np.random.randint(size=(10000, n_classes), high=4, low=0).astype('float32')
         model = CategoricalDNN(evidential=True,
+                               activation="leaky",
                                n_classes=n_classes,
                                n_inputs=10,
                                epochs=10,

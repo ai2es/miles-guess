@@ -3,11 +3,14 @@ import keras
 import keras.ops as ops
 import numpy as np
 from keras.regularizers import L1, L2, L1L2
-from keras.layers import Dense, LeakyReLU, GaussianNoise, Dropout
+# from keras.layers import Dense, LeakyReLU, GaussianNoise, Dropout
+from keras.layers import Dense, GaussianNoise, Dropout
+from mlguess.keras.layers import LeakyReLU
 from mlguess.keras.layers import DenseNormalGamma, DenseNormal
 from mlguess.keras.losses import evidential_cat_loss, evidential_reg_loss, gaussian_nll
 from mlguess.keras.callbacks import ReportEpoch
 from keras.optimizers import Adam, SGD
+
 
 
 @keras.saving.register_keras_serializable()
