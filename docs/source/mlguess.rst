@@ -8,6 +8,7 @@ Subpackages
    :maxdepth: 4
 
    mlguess.keras
+   mlguess.tests
    mlguess.torch
 
 Submodules
