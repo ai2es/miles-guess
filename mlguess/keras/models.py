@@ -44,6 +44,7 @@ class CategoricalDNN(keras.models.Model):
                  batch_size=128, epochs=2, kernel_reg=None, l1_weight=0.0, l2_weight=0.0, sgd_momentum=0.9,
                  adam_beta_1=0.9, adam_beta_2=0.999, epsilon=1e-7, decay=0, verbose=0, random_state=1000, n_classes=2,
                  n_inputs=42, callbacks=None, **kwargs):
+
         super().__init__(**kwargs)
         self.hidden_layers = hidden_layers
         self.hidden_neurons = hidden_neurons
@@ -136,7 +137,7 @@ class CategoricalDNN(keras.models.Model):
 
         return mod
 
-    def fit(self, x, y, **kwargs):
+    def fit(self, x=None, y=None, **kwargs):
 
         if self.evidential:
             e = keras.Variable(1)
@@ -325,7 +326,7 @@ class RegressorDNN(keras.models.Model):
 
         return layer_output
 
-    def fit(self, x, y, **kwargs):
+    def fit(self, x=None, y=None, **kwargs):
 
         if self.evidential:
             self.loss = evidential_reg_loss(evi_coef=self.evi_coeff)
@@ -337,7 +338,7 @@ class RegressorDNN(keras.models.Model):
 
         return hist
 
-    def predict(self, x, return_uncertainties=True, batch_size=10000):
+    def predict(self, x, return_uncertainties=True, batch_size=1000, **kwargs):
         """
         Args:
             x: Input data

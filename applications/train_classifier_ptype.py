@@ -12,20 +12,10 @@ import pickle
 import warnings
 import numpy as np
 import pandas as pd
-from tensorflow.keras import backend as K
+from keras import backend as K
 from argparse import ArgumentParser
-
-try:
-    from ptype.callbacks import MetricsCallback
-except ImportError:
-    import subprocess
-    subprocess.run(['pip', 'install', 'git+https://github.com/ai2es/ptype-physical.git'], check=True)
-    
-from ptype.callbacks import MetricsCallback
-from ptype.data import load_ptype_uq, preprocess_data
-
-from sklearn.model_selection import GroupShuffleSplit
-from mlguess.keras.callbacks import get_callbacks, ReportEpoch
+from mlguess.keras.data import load_ptype_uq, preprocess_data
+from mlguess.keras.callbacks import get_callbacks, MetricsCallback
 from mlguess.keras.models import CategoricalDNN
 from mlguess.pbs import launch_pbs_jobs
 from bridgescaler import save_scaler
@@ -178,26 +168,29 @@ def trainer(conf, evaluate=True, data_split=0, mc_forward_passes=0):
     if evaluate:
         # Save the best model when not using ECHO
         if conf["ensemble"]["n_splits"] == 1:
-            mlp.model.save(os.path.join(conf["save_loc"], "models", "best.h5"))
+            mlp.save(os.path.join(conf["save_loc"], "models", "best.keras"))
         else:
-            mlp.model.save(
-                os.path.join(conf["save_loc"], "models", f"model_{data_split}.h5")
+            mlp.save(
+                os.path.join(conf["save_loc"], "models", f"model_{data_split}.keras")
             )
         for name in data.keys():
             x = scaled_data[f"{name}_x"]
             if use_uncertainty:
-                pred_probs, u, ale, epi = mlp.predict_uncertainty(x)
-                pred_probs = pred_probs.numpy()
-                u = u.numpy()
-                ale = ale.numpy()
-                epi = epi.numpy()
+                pred_probs, u, ale, epi = mlp.predict(x, return_uncertainties=True)
+                entropy = np.zeros(pred_probs.shape)
+                mutual_info = np.zeros(pred_probs.shape)
             elif mc_forward_passes > 0:  # Compute epistemic uncertainty with MC dropout
                 pred_probs = mlp.predict(x)
                 _, ale, epi, entropy, mutual_info = mlp.predict_dropout(
-                    x, mc_forward_passes=mc_forward_passes
-                )
+                    x, mc_forward_passes=mc_forward_passes)
+                u = np.zeros(pred_probs.shape)
             else:
                 pred_probs = mlp.predict(x)
+                ale = np.zeros(pred_probs.shape)
+                u = np.zeros(pred_probs.shape)
+                epi = np.zeros(pred_probs.shape)
+                entropy = np.zeros(pred_probs.shape)
+                mutual_info = np.zeros(pred_probs.shape)
             true_labels = np.argmax(data[name][output_features].to_numpy(), 1)
             pred_labels = np.argmax(pred_probs, 1)
             confidences = np.take_along_axis(pred_probs, pred_labels[:, None], axis=1)
