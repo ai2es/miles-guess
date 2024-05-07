@@ -4,7 +4,6 @@ import keras.ops as ops
 import numpy as np
 from keras.regularizers import L1, L2, L1L2
 from keras.layers import Dense, GaussianNoise, Dropout
-from mlguess.keras.layers import LeakyReLU
 from mlguess.keras.layers import DenseNormalGamma, DenseNormal
 from mlguess.keras.losses import evidential_cat_loss, evidential_reg_loss, gaussian_nll
 from mlguess.keras.callbacks import ReportEpoch
@@ -15,10 +14,14 @@ from keras.optimizers import Adam, SGD
 @keras.saving.register_keras_serializable()
 class CategoricalDNN(keras.models.Model):
     """
-    A Dense Neural Network Model that can support arbitrary numbers of hidden layers.
+    A Categorical Dense Neural Network Model that can support arbitrary numbers of hidden layers
+    and the ability to provide evidential uncertainty estimation.
+
     Attributes:
         hidden_layers: Number of hidden layers
         hidden_neurons: Number of neurons in each hidden layer
+        evidential (bool): Whether to use evidential approach (custom loss)
+        annealing_coeff: Annealing coefficient for evidential loss (ignored if evidential==False)
         activation: Type of activation function
         output_activation: Activation function applied to the output layer
         optimizer: Name of optimizer or optimizer object.
@@ -38,6 +41,43 @@ class CategoricalDNN(keras.models.Model):
         decay: Level of decay to apply to learning rate
         verbose: Level of detail to provide during training (0 = None, 1 = Minimal, 2 = All)
         classifier: (boolean) If training on classes
+
+        Example:
+
+            When evidential==True, the output activation and the loss function will be overridden under the hood. When
+            evidential==False, it will use the parameters specified and ignore the annealing_coeff.
+            Note: Model compilation happens under the hood when .fit() is called.
+
+            n_samples = 1000
+            n_features = 23
+            n_classes = 5
+            x_train = np.random.random(size=(n_samples, n_features))
+            y_train = np.random.randint(low=0, high=n_classes, size=n_samples)
+
+            ### Evidential
+            model = CategoricalDNN(hidden_layers=2,
+                                   evidential=True,
+                                   activation='relu',
+                                   n_classes=n_classes,
+                                   n_inputs=n_features,
+                                   epochs=10,
+                                   annealing_coeff=1.5,
+                                   lr=0.0001)
+            hist = model.fit(x_train, y_train)
+            p_with_uncertainty = model.predict(x_train, return_uncertainties=True, batch_size=5000)
+
+            ### Vanilla DNN
+            model = CategoricalDNN(hidden_layers=2,
+                                   evidential=False,
+                                   activation='relu',
+                                   output_activation='softmax',
+                                   loss='categorical_crossentropy',
+                                   n_classes=n_classes,
+                                   n_inputs=n_features,
+                                   epochs=10,
+                                   lr=0.0001)
+            hist = model.fit(x_train, y_train)
+            p = model.predict(x_train, return_uncertainties=False, batch_size=5000)
     """
 
     def __init__(self, hidden_layers=2, hidden_neurons=64, evidential=False, activation="relu",
@@ -89,8 +129,6 @@ class CategoricalDNN(keras.models.Model):
             inputs (int): Number of input predictor variables
             outputs (int): Number of output predictor variables
         """
-        if self.activation == "leaky":
-            self.activation = LeakyReLU()
 
         if self.kernel_reg == "l1":
             self.kernel_reg = L1(self.l1_weight)
@@ -158,7 +196,16 @@ class CategoricalDNN(keras.models.Model):
         return hist
 
     def predict(self, x, return_uncertainties=True, **kwargs):
-
+        """
+        Args:
+            x: Input data
+            batch_size: Size of batch to predict
+            return_uncertainties: Returns derived uncertainties from evidential distribution parameters.
+                                  If False, return the probabilities only.
+        Returns:
+            If return_uncertainties is True (tuple): (probs, u (evidential uncertainty), aleatoric, epistemic)
+            Else If return_uncertainties is False: probs
+        """
         if (not self.evidential) and return_uncertainties:
             raise NotImplementedError("You can only return uncertainty estimates when 'evidential' is True. Otherwise "
                                       "you can set 'return_uncertainties' to False to return probabilities.")
@@ -216,13 +263,15 @@ class CategoricalDNN(keras.models.Model):
 class RegressorDNN(keras.models.Model):
     """
     A Dense Neural Network Model that can support arbitrary numbers of hidden layers
-    and provides evidential uncertainty estimation.
-    Inherits from BaseRegressor.
+    and the ability to provide evidential uncertainty estimation or uncertainty estimation through
+    a gaussian parametric approach.
 
     Attributes:
         hidden_layers: Number of hidden layers.
         hidden_neurons: Number of neurons in each hidden layer.
         activation: Type of activation function.
+        evidential (bool): Whether to use evidential model (outputs [mean, aleatoric, epistemic])
+        uncertainty (bool): Whether to use the Gaussian Parametric approach (outputs [mean, std])
         optimizer: Name of optimizer or optimizer object.
         loss: Name of loss function or loss object.
         use_noise: Whether additive Gaussian noise layers are included in the network.
@@ -232,9 +281,53 @@ class RegressorDNN(keras.models.Model):
         batch_size: Number of examples per batch.
         epochs: Number of epochs to train.
         verbose: Level of detail to provide during training.
-        model: Keras Model object.
-        evidential_coef: Evidential regularization coefficient.
+        evi_coeff: Evidential regularization coefficient.
         metrics: Optional list of metrics to monitor during training.
+
+        Example:
+
+            When evidential==True or uncertainty==True, the output activation and the loss function will be overridden
+            under the hood. If both are True, the evidential model will override. When both are set to False,
+            it will train a generic DNN with a linear output activation and the specified loss function.
+            'evi_coeff' is only used when evidential==True and is otherwise ignored.
+            Note: Model compilation happens under the hood when .fit() is called.
+
+            n_samples = 1000
+            n_features = 23
+            n_output_tasks = 1
+            x_train = np.random.random(size=(n_samples, n_features))
+            y_train = np.random.random(size=(n_samples, n_output_tasks)
+
+            ### Evidential
+            model = RegressorDNN(hidden_layers=2,
+                                 n_output_tasks=n_output_tasks,
+                                 n_inputs=n_features,
+                                 evidential=True,
+                                 epochs=10)
+            model.fit(x_train, y_train)
+            p_with_uncertainty = model.predict(x_train, return_uncertainties=True)
+
+
+            ### Gaussian Parametric
+            model = RegressorDNN(hidden_layers=2,
+                                 n_output_tasks=n_output_tasks,
+                                 n_inputs=n_features,
+                                 evidential=False,
+                                 uncertainty=True,
+                                 epochs=10)
+            model.fit(x_train, y_train)
+            p_with_uncertainty = model.predict(x_train, return_uncertainties=True)
+
+
+            ### Vanilla DNN
+            model = RegressorDNN(hidden_layers=2,
+                                 n_output_tasks=n_output_tasks,
+                                 n_inputs=n_features,
+                                 evidential=False,
+                                 uncertainty=False,
+                                 epochs=10)
+            model.fit(x_train, y_train)
+            p = model.predict(x_train, return_uncertainties=False)
     """
     def __init__(self, hidden_layers=2, hidden_neurons=64, evidential=False, activation="relu", optimizer="adam",
                  loss_weights=None, use_noise=False, noise_sd=0.01, lr=0.00001, use_dropout=False, dropout_alpha=0.1,
@@ -280,8 +373,6 @@ class RegressorDNN(keras.models.Model):
                                 "batch_size", "use_noise", "noise_sd", "use_dropout", "dropout_alpha", "epochs",
                                 "verbose", "n_inputs", "n_output_tasks", "epsilon", "evi_coeff", "uncertainty"]
 
-        if self.activation == "leaky":
-            self.activation = LeakyReLU()
         if self.kernel_reg == "l1":
             self.kernel_reg = L1(self.l1_weight)
         elif self.kernel_reg == "l2":
