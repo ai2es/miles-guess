@@ -72,13 +72,18 @@ class LearningRateTracker(Callback):
         logs = logs or {}
         logs["lr"] = K.get_value(self.model.optimizer.lr)
 
-
+@keras.saving.register_keras_serializable()
 class ReportEpoch(keras.callbacks.Callback):
     def __init__(self, epoch_var):
         self.epoch_var = epoch_var
 
-    def on_epoch_begin(self, epoch, logs=None):
-        self.epoch_var.assign_add(1)
+    def on_epoch_end(self, epoch, logs={}):
+        self.epoch_var += 1
+
+    def get_config(self):
+
+        return {}
+
 
 
 class MetricsCallback(keras.callbacks.Callback):
