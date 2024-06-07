@@ -1,9 +1,9 @@
 # MILES-Guess
 Generalized Uncertainty for Earth System Science (GUESS)
 
-Developed by the Machine Ingetration and Learning for Earth Systems (MILES) group at the National Center for Atmospheric Research (NCAR), Boulder CO, USA
+Developed by the Machine Ingetration and Learning for Earth Systems (MILES) group at the NSF National Center for Atmospheric Research (NCAR), Boulder CO, USA
 
-## Contributers 
+## Contributors 
 * John Schreck
 * David John Gagne
 * Charlie Becker
@@ -11,43 +11,47 @@ Developed by the Machine Ingetration and Learning for Earth Systems (MILES) grou
 * Dhamma Kimpara
 * Thomas Martin
 
+## Documentation
+Full documentation is [here](https://miles-guess.readthedocs.io/en/latest/).
+
+## Quick Setup
+
+Install in your Python environment with the following command:
+```bash
+pip install miles-guess
+```
+If you want to install a particular backend (tensorflow, tensorflow_gpu, torch, jax): 
+```bash
+pip install miles-guess[<backend>]
+```
 ## Setup from Scratch
 
-* Install the Miniconda Python installer available
+Install the Miniconda Python installer available
 [here](https://docs.conda.io/en/latest/miniconda.html).
 
-* clone evidential repo
-`git clone https://github.com/ai2es/miles-guess.git`
+First clone the miles-guess repo from github.
+```bash
+git clone https://github.com/ai2es/miles-guess.git`
+cd miles-guess
+```
 
-`cd miles-guess`
+Create a conda environment for non-Casper/Derecho users:
+```bash
+mamba env create -f environment.yml`
+conda activate guess`
+```
 
-* Create a conda environment for non-Casper/Derecho users:  
-
-`conda env create -f environment.yml`
-
-`conda activate guess`
-
-* Create a conda environment for Casper/Derecho users including Tensorflow 2.12 with GPU support:
-
-`conda env create -f environment_casper.yml`
-
-`conda activate guess`
-
-`wget https://github.com/NCAR/casper_tensorflow_gpu/blob/0e154b1c75bce611638daa8219ab2b866367bb72/activate_env_vars.sh`
-
-`wget https://github.com/NCAR/casper_tensorflow_gpu/blob/0e154b1c75bce611638daa8219ab2b866367bb72/deactivate_env_vars.sh`
-
-`mkdir -p $CONDA_PREFIX/etc/conda/activate.d`
-
-`mkdir -p $CONDA_PREFIX/etc/conda/deactivate.d`
-
-`cp deactivate_env_vars.sh $CONDA_PREFIX/etc/conda/deactivate.d/env_vars.sh`
-
-`cp activate_env_vars.sh $CONDA_PREFIX/etc/conda/activate.d/env_vars.sh`
+Create a conda environment for Casper/Derecho users including Tensorflow 2.15 with GPU support.
+```bash
+mamba env create -f environment_gpu.yml`
+conda activate guess
+```
 
 ## Using miles-guess
 
-The package contains three scripts for training three regression models, and one for training categorical models. The regression examples are trained on our surface layer ("SL") dataset for predicting latent heat and other quantities, and the categorical example is trained on a precipitation dataset ("p-type").
+The package contains three scripts for training three regression models, and one for training categorical models. 
+The regression examples are trained on our surface layer ("SL") dataset for predicting latent heat and other quantities, 
+and the categorical example is trained on a precipitation dataset ("p-type").
 
 The law of total variance for each model prediction target may be computed as 
 
@@ -56,32 +60,32 @@ $$LoTV = E[\sigma^2] + Var[\mu]$$
 which is the sum of aleatoric and epistemic contributions, respectively. 
 
 ### 1a. Train/evaluate a deterministic multi-layer perceptrion (MLP) on the SL dataset:
-```python
-python applications/train_mlp_SL.py -c config/model_mlp_SL.yml
+```bash
+python3 applications/train_mlp_SL.py -c config/model_mlp_SL.yml
 ```
 
 ### 1b. Train/evaluate a parametric "Gaussian" MLP on the SL dataset:
-```python
+```bash
 python applications/train_gaussian_SL.py -c config/model_gaussian_SL.yml
 ```
 
 ### 1c. Train/evaluate a parametric "normal-inverse gamma" (evidential) MLP on the SL dataset:
-```python
+```bash
 python applications/train_evidential_SL.py -c config/model_evidential_SL.yml
 ```
 
 ### 2a. Train a categorical MLP classifier on the p-type dataset:
-```python
+```bash
 python applications/train_classifier_ptype.py -c config/model_classifier_ptype.yml
 ```
 
 ### 2b. Train an evidential MLP classifier on the p-type dataset:
-```python
+```bash
 python applications/train_classifier_ptype.py -c config/model_evidential_ptype.yml
 ```
 
 ### 2c. Evaluate a categorical/evidential classifier on the p-type dataset:
-```python
+```bash
 python applications/evaluate_ptype.py -c config/model_classifier_ptype.yml
 ```
 

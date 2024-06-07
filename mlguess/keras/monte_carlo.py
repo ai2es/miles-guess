@@ -1,5 +1,5 @@
 import numpy as np
-import tensorflow.keras.backend as K
+import keras.backend as K
 
 
 def monte_carlo_ensemble(model, x_test, y_test, forward_passes, y_scaler=None):
@@ -12,7 +12,7 @@ def monte_carlo_ensemble(model, x_test, y_test, forward_passes, y_scaler=None):
         data loader object from the data loader module
     forward_passes : int
         number of monte-carlo samples/forward passes
-    model : object
+    model : mlguess
         keras model
     n_classes : int
         number of classes in the dataset
@@ -25,7 +25,7 @@ def monte_carlo_ensemble(model, x_test, y_test, forward_passes, y_scaler=None):
     dropout_aleatoric = np.zeros((forward_passes, n_samples, pred_size))
 
     for i in range(forward_passes):
-        output = model.model(x_test, training=True)
+        output = model(x_test, training=True)
         mu, aleatoric = model.calc_uncertainties(output.numpy(), y_scaler)
         dropout_mu[i] = mu
         dropout_aleatoric[i] = aleatoric

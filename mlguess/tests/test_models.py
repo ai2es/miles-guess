@@ -1,14 +1,13 @@
 import warnings
+import keras
 warnings.filterwarnings("ignore")
-
 import yaml
 import unittest
-import pandas as pd
-from sklearn.model_selection import GroupShuffleSplit
-from sklearn.preprocessing import RobustScaler, MinMaxScaler
-from mlguess.keras.models import BaseRegressor as RegressorDNN
-from mlguess.keras.models import GaussianRegressorDNN
-from mlguess.keras.models import EvidentialRegressorDNN
+import numpy as np
+from mlguess.keras.models import CategoricalDNN, EvidentialRegressorDNN
+from mlguess.keras.losses import evidential_cat_loss, evidential_reg_loss
+from keras.models import load_model
+from mlguess.keras.callbacks import ReportEpoch
 
 class TestModels(unittest.TestCase):
     def setUp(self):
@@ -19,73 +18,46 @@ class TestModels(unittest.TestCase):
 
         with open(self.mlp_config) as cf:
             self.mlp_conf = yaml.load(cf, Loader=yaml.FullLoader)
-            
+
         with open(self.gaussian_config) as cf:
             self.gaussian_conf = yaml.load(cf, Loader=yaml.FullLoader)
 
         with open(self.evidential_config) as cf:
             self.evidential_conf = yaml.load(cf, Loader=yaml.FullLoader)
 
-        # Instantiate and preprocess the data (as you did before)...
-        data_file = "data/sample_cabauw_surface_layer.csv"
-        self.data = pd.read_csv(data_file)
-        self.data["day"] = self.data["Time"].apply(lambda x: str(x).split(" ")[0])
+    def test_evidential_categorical_model(self):
+        n_classes = 5
+        epoch_var = keras.Variable(0)
+        x_train = np.random.random(size=(10000, 10)).astype('float32')
+        y_train = np.random.randint(size=(10000, n_classes), high=4, low=0).astype('float32')
+        report_epoch_callback = ReportEpoch(epoch_var)
+        model = CategoricalDNN(n_classes=n_classes)
+        model.compile(loss=evidential_cat_loss(evi_coef=1.0, epoch_callback=report_epoch_callback), optimizer="adam")
+        hist = model.fit(x_train, y_train, epochs=10, callbacks=report_epoch_callback)
+        p_with_uncertainty = model.predict(x_train, return_uncertainties=True, batch_size=10000)
+        p_without_uncertainty = model.predict(x_train, return_uncertainties=False, batch_size=10000)
+        assert len(p_with_uncertainty) == 4
+        assert p_with_uncertainty[0].shape[-1] == n_classes
+        assert p_with_uncertainty[1].shape[-1] == 1
+        assert p_with_uncertainty[2].shape[-1] == n_classes
+        assert p_with_uncertainty[3].shape[-1] == n_classes
+        assert p_without_uncertainty.shape[-1] == n_classes
+        model.save("test_evi_categorical.keras")
+        load_model("test_evi_categorical.keras")
 
-        # Initialize scalers and split data
-        self.x_scaler, self.y_scaler = RobustScaler(), MinMaxScaler((0, 1))
-        self.input_cols = self.mlp_conf["data"]["input_cols"]
-        self.output_cols = ['friction_velocity:surface:m_s-1']
+    def test_evidential_regression_model(self):
 
-        self.flat_seed = 1000
-        gsp = GroupShuffleSplit(n_splits=1, random_state=self.flat_seed, train_size=0.9)
-        splits = list(gsp.split(self.data, groups=self.data["day"]))
-        train_index, test_index = splits[0]
-        self.train_data, self.test_data = self.data.iloc[train_index].copy(), self.data.iloc[test_index].copy()
-
-        gsp = GroupShuffleSplit(n_splits=1, random_state=self.flat_seed, train_size=0.885)
-        splits = list(gsp.split(self.train_data, groups=self.train_data["day"]))
-        train_index, valid_index = splits[0]
-        self.train_data, self.valid_data = self.train_data.iloc[train_index].copy(), self.train_data.iloc[valid_index].copy()
-
-        x_train = self.x_scaler.fit_transform(self.train_data[self.input_cols])
-        x_valid = self.x_scaler.transform(self.valid_data[self.input_cols])
-        x_test = self.x_scaler.transform(self.test_data[self.input_cols])
-
-        y_train = self.y_scaler.fit_transform(self.train_data[self.output_cols])
-        y_valid = self.y_scaler.transform(self.valid_data[self.output_cols])
-        y_test = self.y_scaler.transform(self.test_data[self.output_cols])
-
-        self.data = (x_train, y_train, x_valid, y_valid, x_test, y_test)
-
-    def test_mlp_model(self):
-        x_train, y_train, x_valid, y_valid, x_test, y_test = self.data
-
-        # Instantiate and build the MLP model
-        mlp_model = RegressorDNN(**self.mlp_conf["model"])
-        mlp_model.build_neural_network(x_train.shape[-1], y_train.shape[-1])
-
-        # Test the MLP model here...
-        # Example: mlp_model.fit(...) and assertions
-
-    def test_gaussian_model(self):
-        x_train, y_train, x_valid, y_valid, x_test, y_test = self.data
-
-        # Instantiate and build the GaussianRegressorDNN model
-        gaussian_model = GaussianRegressorDNN(**self.gaussian_conf["model"])
-        gaussian_model.build_neural_network(x_train.shape[-1], y_train.shape[-1])
-
-        # Test the GaussianRegressorDNN model here...
-        # Example: gaussian_model.fit(...) and assertions
-
-    def test_evidential_model(self):
-        x_train, y_train, x_valid, y_valid, x_test, y_test = self.data
-
-        # Instantiate and build the EvidentialRegressorDNN model
-        evidential_model = EvidentialRegressorDNN(**self.evidential_conf["model"])
-        evidential_model.build_neural_network(x_train.shape[-1], y_train.shape[-1])
-        assert evidential_model.model.output.shape[1] == 4
-        # Test the EvidentialRegressorDNN model here...
-        # Example: evidential_model.fit(...) and assertions
+        x_train = np.random.random(size=(10000, 10)).astype('float32')
+        y_train = np.random.random(size=(10000, 1)).astype('float32')
+        model = EvidentialRegressorDNN(hidden_layers=2)
+        model.compile(loss=evidential_reg_loss(0.01), optimizer="adam")
+        model.fit(x_train, y_train, epochs=10)
+        p_with_uncertainty = model.predict(x_train, return_uncertainties=True)
+        p_without_uncertainty = model.predict(x_train, return_uncertainties=False)
+        assert p_with_uncertainty.shape[-1] == 3
+        assert p_without_uncertainty.shape[-1] == 4
+        model.save("test_evi_regression.keras")
+        load_model("test_evi_regression.keras")
 
 if __name__ == "__main__":
     unittest.main()

@@ -3,8 +3,8 @@ requires = ["setuptools", "setuptools-scm"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "mlguess"
-authors = [{name = "John Schreck, David John Gagne, Charlie Becker, Gabrielle Gantos", email = "miles@ucar.edu"}]
+name = "miles-guess"
+authors = [{name = "John Schreck, David John Gagne, Charlie Becker, Gabrielle Gantos", email = "milescore@ucar.edu"}]
 readme = "README.md"
 license = {file = "LICENSE"}
 dynamic = ["version"]
@@ -16,8 +16,6 @@ dependencies = [
     "pandas",
     "xarray",
     "keras",
-    "tensorflow",
-    "tensorflow_addons",
     "scikit-learn",
     "netcdf4",
     "pyyaml",
@@ -34,8 +32,20 @@ dependencies = [
     "nbsphinx",
     "myst_parser",
     "sphinx_book_theme",
-    "pytest"
+    "pytest",
+    "hagelslag"
     ]
+
+[project.optional-dependencies]
+tensorflow = ["tensorflow==2.16.0rc0"]
+
+tensorflow_gpu = ["tensorflow[and-cuda]==2.16.0rc0"]
+
+torch = ["torch"]
+
+jax = ["jax"]
+
+
 
 [tool.setuptools]
 packages = ["mlguess", "mlguess.keras", "mlguess.torch"]
