@@ -3,8 +3,8 @@ channels:
   - conda-forge
   - nvidia
 dependencies:
-  - python=3.11
-  - numpy=1.23.*
+  - python=3.10
+  - numpy<1.24
   - scipy
   - matplotlib
   - xarray
@@ -22,11 +22,12 @@ dependencies:
   - seaborn
   - sphinx
   - numba
-  - imbalanced-learn
-  - pyarrow
   - properscoring
+  - pyarrow
+  - imbalanced-learn
   - pip:
     - tensorflow[and-cuda]
+    - keras
     - echo-opt
     - hagelslag
     - bridgescaler
