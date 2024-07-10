@@ -49,7 +49,7 @@ def evidential_regression_loss(y, pred, coef=1.0):
     return loss_nll.mean() + coef * loss_reg.mean()
 
 
-### code below based off https://github.com/deargen/MT-ENet
+# code below based off https://github.com/deargen/MT-ENet
 
 
 def modified_mse(gamma, nu, alpha, beta, target, reduction='mean'):
@@ -67,11 +67,11 @@ def modified_mse(gamma, nu, alpha, beta, target, reduction='mean'):
         target ([FloatTensor]): true labels.
         reduction (str, optional): . Defaults to 'mean'.
     Returns:
-        [FloatTensor]: The loss value. 
+        [FloatTensor]: The loss value.
     """
-    mse = (gamma - target) ** 2
+    mse = (gamma-target)**2
     c = get_mse_coef(gamma, nu, alpha, beta, target).detach()
-    mod_mse = mse * c
+    mod_mse = mse*c
 
     if reduction == 'mean':
         return mod_mse.mean()
@@ -99,11 +99,11 @@ def get_mse_coef(gamma, nu, alpha, beta, y):
     Returns:
         [FloatTensor]: [0.0-1.0], the coefficient of the MSE for each prediction.
     """
-    alpha_eff = check_mse_efficiency_alpha(gamma, nu, alpha, beta, y)
-    nu_eff = check_mse_efficiency_nu(gamma, nu, alpha, beta, y)
+    alpha_eff = check_mse_efficiency_alpha(nu, alpha, beta)
+    nu_eff = check_mse_efficiency_nu(gamma, nu, alpha, beta)
     delta = (gamma - y).abs()
     min_bound = torch.min(nu_eff, alpha_eff).min()
-    c = (min_bound.sqrt() / (delta + tol)).detach()
+    c = (min_bound.sqrt()/(delta + tol)).detach()
     return torch.clip(c, min=False, max=1.)
 
 
@@ -122,11 +122,11 @@ def check_mse_efficiency_alpha(nu, alpha, beta):
         beta (torch.Tensor): beta output value of the evidential network
 
     Return:
-        partial f / partial alpha(numpy.array) 
+        partial f / partial alpha(numpy.array)
         where f => the NLL loss (BayesianDTI.loss.MarginalLikelihood)
-    
+
     """
-    right = (torch.exp((torch.digamma(alpha + 0.5) - torch.digamma(alpha))) - 1) * 2 * beta * (1 + nu) / (nu + 1e-8)
+    right = (torch.exp((torch.digamma(alpha+0.5)-torch.digamma(alpha))) - 1)*2*beta*(1+nu) / (nu + 1e-8)
     return right.detach()
 
 
@@ -144,9 +144,9 @@ def check_mse_efficiency_nu(gamma, nu, alpha, beta):
         nu (torch.Tensor): nu output value of the evidential network
         alpha (torch.Tensor): alpha output value of the evidential network
         beta (torch.Tensor): beta output value of the evidential network
-    
+
     Return:
-        partial f / partial nu(torch.Tensor) 
+        partial f / partial nu(torch.Tensor)
         where f => the NLL loss (BayesianDTI.loss.MarginalLikelihood)
     """
     gamma, nu, alpha, beta = gamma.detach(), nu.detach(), alpha.detach(), beta.detach()
@@ -158,13 +158,12 @@ class EvidentialMarginalLikelihood(torch.nn.modules.loss._Loss):
     """
     Marginal likelihood error of prior network.
     The target value is not a distribution (mu, std), but a just value.
-    
+
     This is a negative log marginal likelihood, with integral mu and sigma.
 
     Reference: https://www.mit.edu/~amini/pubs/pdf/deep-evidential-regression.pdf
     Source: https://github.com/deargen/MT-ENet/tree/468822188f52e517b1ee8e386eea607b2b7d8829
     """
-
     def __init__(self, size_average=None, reduce=None, reduction: str = 'mean'):
         super(EvidentialMarginalLikelihood, self).__init__(size_average, reduce, reduction)
 
@@ -177,15 +176,19 @@ class EvidentialMarginalLikelihood(torch.nn.modules.loss._Loss):
             alpha (torch.Tensor): alpha output value of the evidential network
             beta (torch.Tensor): beta output value of the evidential network
             target (torch.Tensor): target value
-            
+
         Return:
             (Tensor) Negative log marginal likelihood of EvidentialNet
-
+                p(y|m) = Student-t(y; gamma, (beta(1+nu))/(nu*alpha) , 2*alpha)
+                then, the negative log likelihood is (CAUTION QUITE COMPLEX!)
+                NLL = -log(p(y|m)) =
+                    log(3.14/nu)*0.5 - alpha*log(2*beta*(1 + nu)) + (alpha + 0.5)*log( nu(target - gamma)^2 + 2*beta(1 + nu) )
+                    + log(GammaFunc(alpha)/GammaFunc(alpha + 0.5))
         """
         pi = torch.tensor(np.pi)
-        x1 = torch.log(pi / (nu + tol)) * 0.5
-        x2 = -alpha * torch.log(2. * beta * (1. + nu) + tol)
-        x3 = (alpha + 0.5) * torch.log(nu * (target - gamma) ** 2 + 2. * beta * (1. + nu) + tol)
+        x1 = torch.log(pi/(nu + tol))*0.5
+        x2 = -alpha*torch.log(2.*beta*(1. + nu) + tol)
+        x3 = (alpha + 0.5)*torch.log(nu*(target - gamma)**2 + 2.*beta*(1. + nu) + tol)
         x4 = torch.lgamma(alpha + tol) - torch.lgamma(alpha + 0.5 + tol)
         if self.reduction == 'mean':
             return (x1 + x2 + x3 + x4).mean()
@@ -203,7 +206,6 @@ class EvidenceRegularizer(torch.nn.modules.loss._Loss):
     Reference: https://www.mit.edu/~amini/pubs/pdf/deep-evidential-regression.pdf
     Source: https://github.com/deargen/MT-ENet/tree/468822188f52e517b1ee8e386eea607b2b7d8829
     """
-
     def __init__(self, size_average=None, reduce=None, reduction: str = 'mean', factor=0.1):
         super(EvidenceRegularizer, self).__init__(size_average, reduce, reduction)
         self.factor = factor
@@ -219,8 +221,10 @@ class EvidenceRegularizer(torch.nn.modules.loss._Loss):
 
         Return:
             (Tensor) prior network regularization
+            Loss = |y - gamma|*(2*nu + alpha) * factor
+
         """
-        loss_value = torch.abs(target - gamma) * (2 * nu + alpha) * self.factor
+        loss_value = torch.abs(target - gamma)*(2*nu + alpha) * self.factor
         if self.reduction == 'mean':
             return loss_value.mean()
         elif self.reduction == 'sum':
@@ -229,23 +233,17 @@ class EvidenceRegularizer(torch.nn.modules.loss._Loss):
             return loss_value
 
 
-class GaussianNLL(torch.nn.modules.loss._Loss):
-    """
-    Negative Gaussian likelihood loss.
+class CombinedEvidentialLoss(torch.nn.Module):
+    def __init__(self, tol=1e-8, factor=0.1, reduction='mean'):
+        super(CombinedEvidentialLoss, self).__init__()
+        self.tol = tol
+        self.factor = factor
+        self.reduction = reduction
+        self.evidential_marginal_likelihood = EvidentialMarginalLikelihood(reduction=reduction)
+        self.evidence_regularizer = EvidenceRegularizer(factor=factor, reduction=reduction)
 
-    Reference: https://www.mit.edu/~amini/pubs/pdf/deep-evidential-regression.pdf
-    Source: https://github.com/deargen/MT-ENet/tree/468822188f52e517b1ee8e386eea607b2b7d8829
-    """
-
-    def __init__(self, size_average=None, reduce=None, reduction: str = 'mean'):
-        super(GaussianNLL, self).__init__(size_average, reduce, reduction)
-
-    def forward(self, input_mu: torch.Tensor, input_std: torch.Tensor,
-                target: torch.Tensor) -> torch.Tensor:
-        x1 = 0.5 * torch.log(2 * np.pi * input_std * input_std)
-        x2 = 0.5 / (input_std ** 2) * ((target - input_mu) ** 2)
-
-        if self.reduction == 'mean':
-            return torch.mean(x1 + x2)
-        elif self.reduction == 'sum':
-            return torch.sum(x1 + x2)
+    def forward(self, gamma, nu, alpha, beta, target):
+        loss = self.evidential_marginal_likelihood(gamma, nu, alpha, beta, target)
+        loss += self.evidence_regularizer(gamma, nu, alpha, target)
+        loss += modified_mse(gamma, nu, alpha, beta, target, reduction=self.reduction)
+        return loss
