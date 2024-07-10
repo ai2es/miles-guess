@@ -26,7 +26,7 @@ from mlguess.torch.checkpoint import (
     TorchFSDPCheckpointIO
 )
 from mlguess.torch.trainer import Trainer
-from mlguess.torch.regression_losses import CombinedEvidentialLoss
+from mlguess.torch.regression_losses import LipschitzMSELoss
 from mlguess.torch.models import seed_everything, DNN
 from mlguess.regression_metrics import regression_metrics
 
@@ -214,8 +214,8 @@ def main(rank, world_size, conf, trial=False):
 
     # Train and validation losses
 
-    train_criterion = CombinedEvidentialLoss(**conf["train_loss"])
-    valid_criterion = CombinedEvidentialLoss(**conf["valid_loss"])
+    train_criterion = LipschitzMSELoss(**conf["train_loss"])
+    valid_criterion = LipschitzMSELoss(**conf["valid_loss"])
 
     # Initialize a trainer object
 

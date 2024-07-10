@@ -233,9 +233,9 @@ class EvidenceRegularizer(torch.nn.modules.loss._Loss):
             return loss_value
 
 
-class CombinedEvidentialLoss(torch.nn.Module):
+class LipschitzMSELoss(torch.nn.Module):
     def __init__(self, tol=1e-8, factor=0.1, reduction='mean'):
-        super(CombinedEvidentialLoss, self).__init__()
+        super(LipschitzMSELoss, self).__init__()
         self.tol = tol
         self.factor = factor
         self.reduction = reduction
