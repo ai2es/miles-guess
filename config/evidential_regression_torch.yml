@@ -38,7 +38,7 @@ trainer:
     train_batch_size: *batch_size
     valid_batch_size: *batch_size
     batches_per_epoch: 500 # Set to 0 to use len(dataloader)
-    valid_batches_per_epoch: 100
+    valid_batches_per_epoch: 0
     learning_rate: 0.0015285262808755972
     weight_decay: 0.0009378550509012784
     start_epoch: 0
@@ -60,19 +60,19 @@ trainer:
 model:
   input_size: *input_cols  # Reference to data:input_cols
   output_size: *output_cols  # Reference to data:output_cols
-  block_sizes: [1057, 1057, 1057, 1057, 1057]  # Example block sizes
+  layer_size: [1057, 1057, 1057, 1057, 1057]  # Example block sizes
   dr: [0.263, 0.263, 0.263, 0.263, 0.263]  # Dropout rates
   batch_norm: False  # Whether to use batch normalization
   lng: True  # Use the evidential layer (True) or not (False)
 
 train_loss:
   tol: 1e-8  # Tolerance parameter for loss calculations
-  factor: 0.1  # Factor for the evidence regularizer
+  coef: 0.1  # Factor for the evidence regularizer
   reduction: "mean"  # Reduction method for the loss calculation
 
 valid_loss:
   tol: 1e-8  # Tolerance parameter for loss calculations
-  factor: 0.1  # Factor for the evidence regularizer
+  coef: 0.1  # Factor for the evidence regularizer
   reduction: "mean"  # Reduction method for the loss calculation
 
 pbs: #derecho
