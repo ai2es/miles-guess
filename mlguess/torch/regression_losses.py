@@ -41,9 +41,8 @@ class EvidentialRegressionLoss:
         evi = 2 * v + alpha
         return error * evi
 
-    def __call__(self, y, pred):
+    def __call__(self, gamma, v, alpha, beta, y):
         """Calculate the Evidential Regression Loss"""
-        gamma, v, alpha, beta = pred
         loss_nll = self.normal_inverse_gamma_nll(y, gamma, v, alpha, beta)
         loss_reg = self.normal_inverse_gamma_reg(y, gamma, v, alpha, beta)
         return loss_nll.mean() + self.coef * loss_reg.mean()
@@ -206,9 +205,9 @@ class EvidenceRegularizer(torch.nn.modules.loss._Loss):
     Reference: https://www.mit.edu/~amini/pubs/pdf/deep-evidential-regression.pdf
     Source: https://github.com/deargen/MT-ENet/tree/468822188f52e517b1ee8e386eea607b2b7d8829
     """
-    def __init__(self, size_average=None, reduce=None, reduction: str = 'mean', factor=0.1):
+    def __init__(self, size_average=None, reduce=None, reduction: str = 'mean', coef=0.1):
         super(EvidenceRegularizer, self).__init__(size_average, reduce, reduction)
-        self.factor = factor
+        self.coef = coef
 
     def forward(self, gamma: torch.Tensor, nu: torch.Tensor, alpha: torch.Tensor,
                 target: torch.Tensor) -> torch.Tensor:
@@ -224,7 +223,7 @@ class EvidenceRegularizer(torch.nn.modules.loss._Loss):
             Loss = |y - gamma|*(2*nu + alpha) * factor
 
         """
-        loss_value = torch.abs(target - gamma)*(2*nu + alpha) * self.factor
+        loss_value = torch.abs(target - gamma)*(2*nu + alpha) * self.coef
         if self.reduction == 'mean':
             return loss_value.mean()
         elif self.reduction == 'sum':
@@ -234,13 +233,13 @@ class EvidenceRegularizer(torch.nn.modules.loss._Loss):
 
 
 class LipschitzMSELoss(torch.nn.Module):
-    def __init__(self, tol=1e-8, factor=0.1, reduction='mean'):
+    def __init__(self, tol=1e-8, coef=0.1, reduction='mean'):
         super(LipschitzMSELoss, self).__init__()
         self.tol = tol
-        self.factor = factor
+        self.coef = coef
         self.reduction = reduction
         self.evidential_marginal_likelihood = EvidentialMarginalLikelihood(reduction=reduction)
-        self.evidence_regularizer = EvidenceRegularizer(factor=factor, reduction=reduction)
+        self.evidence_regularizer = EvidenceRegularizer(coef=coef, reduction=reduction)
 
     def forward(self, gamma, nu, alpha, beta, target):
         loss = self.evidential_marginal_likelihood(gamma, nu, alpha, beta, target)

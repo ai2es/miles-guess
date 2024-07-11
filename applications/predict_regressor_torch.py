@@ -187,7 +187,7 @@ def main(rank, world_size, conf, trial=False):
         if split == "train":
             df = train_loader.dataset.train_data
         elif split == "valid":
-            df = train_loader.dataset.valid_data
+            df = valid_loader.dataset.valid_data
         elif split == "test":
             df = train_loader.dataset.test_data
 

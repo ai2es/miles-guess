@@ -26,7 +26,7 @@ from mlguess.torch.checkpoint import (
     TorchFSDPCheckpointIO
 )
 from mlguess.torch.trainer import Trainer
-from mlguess.torch.regression_losses import LipschitzMSELoss
+from mlguess.torch.regression_losses import LipschitzMSELoss, EvidentialRegressionLoss
 from mlguess.torch.models import seed_everything, DNN
 from mlguess.regression_metrics import regression_metrics
 
@@ -69,7 +69,7 @@ def load_dataset_and_sampler(conf, world_size, rank, is_train, seed=42):
         rank=rank,
         seed=seed,
         shuffle=is_train,
-        drop_last=True
+        drop_last=(not is_train)
     )
     flag = 'training' if is_train else 'validation'
     logging.info(f"Loaded a {flag} torch dataset, and a distributed sampler")
@@ -187,9 +187,9 @@ def main(rank, world_size, conf, trial=False):
         batch_size=valid_batch_size,
         shuffle=False,
         sampler=valid_sampler,
-        pin_memory=False,
+        pin_memory=True,
         num_workers=valid_thread_workers,
-        drop_last=True
+        drop_last=False
     )
 
     # model
@@ -213,6 +213,8 @@ def main(rank, world_size, conf, trial=False):
     model, optimizer, scheduler, scaler = load_model_states_and_optimizer(conf, model, device)
 
     # Train and validation losses
+    # train_criterion = EvidentialRegressionLoss(coef=10.84134458514458)
+    # valid_criterion = EvidentialRegressionLoss(coef=10.84134458514458)
 
     train_criterion = LipschitzMSELoss(**conf["train_loss"])
     valid_criterion = LipschitzMSELoss(**conf["valid_loss"])
@@ -248,6 +250,10 @@ class Objective(BaseObjective):
 
     def train(self, trial, conf):
 
+        conf['trainer']['train_batch_size'] = conf['data']['batch_size']
+        conf['trainer']['valid_batch_size'] = conf['data']['batch_size']
+        conf['valid_loss']['factor'] = conf['train_loss']['factor']
+
         try:
             return main(0, 1, conf, trial=trial)
 
@@ -257,7 +263,7 @@ class Objective(BaseObjective):
                     f"Pruning trial {trial.number} due to CUDA memory overflow: {str(E)}."
                 )
                 raise optuna.TrialPruned()
-            elif "non-singleton" in str(E):
+            elif "non-singleton" in str(E) or "nan" in str(E):
                 logging.warning(
                     f"Pruning trial {trial.number} due to shape mismatch: {str(E)}."
                 )

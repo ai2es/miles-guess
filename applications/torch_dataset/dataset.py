@@ -43,7 +43,7 @@ class CustomDataset(Dataset):
 
         # Compute var on the total training data set
         self.training_var = [
-            np.var(self.y_scaler.transform(train_data[output_cols]))
+            np.var(self.y_scaler.transform(train_data[output_cols])[:, i])
             for i in range(self.train_data[output_cols].shape[-1])
         ]
 

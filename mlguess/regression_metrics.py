@@ -67,42 +67,41 @@ def regression_metrics(y_true, y_pred, total=None, split="val"):
         # metrics[f"{split}_crps_ss"] = r2_score(result['bin'], result['crps'], sample_weight=result["count"])
         # metrics[f"{split}_rmse_ss"] = r2_score(result['bin'], result['rmse'], sample_weight=result["count"])
 
-        rmse_ss = rmse_crps_skill_scores(y_true, y_pred, total, filter_top_percentile=5)
+        rmse_ss = rmse_crps_skill_scores(y_true, y_pred, total, filter_top_percentile=0)
         metrics[f"{split}_r2_rmse_sigma"] = rmse_ss["r2_rmse"]
         metrics[f"{split}_r2_crps_sigma"] = rmse_ss["r2_crps"]
 
     return metrics
 
 
-def rmse_crps_skill_scores(y_true, y_pred, total, filter_top_percentile=0):
-    # Initialize dictionaries to store r2_rmse and r2_crps for each column
+def rmse_crps_skill_scores(y, mu, total, filter_top_percentile=0):
+    # Create a grid of subplots with the number of rows determined by the length of output_cols
     r2_rmse_dict = {}
     r2_crps_dict = {}
 
-    # Get the number of columns from y_pred
-    num_cols = y_pred.shape[1]
-
-    # Loop over the columns
-    for col in range(num_cols):
+    # Loop over the length of output_cols
+    num_cols = y.shape[-1]
+    for col in range(y.shape[-1]):
         result = calculate_skill_score(
-            y_true[:, col],  # Use y_true for the true values
-            y_pred[:, col],  # Use y_pred for the predicted values
-            total[:, col],
+            y[:, col],
+            mu[:, col],
+            np.sqrt(total)[:, col],
             num_bins=100,
             log=True,
             filter_top_percentile=filter_top_percentile
         )
+
         r2_rmse = r2_score(result['bin'], result['rmse'])
         r2_crps = r2_score(result['bin'], result['crps'])
         r2_rmse_dict[col] = r2_rmse
         r2_crps_dict[col] = r2_crps
 
-        if np.isnan(r2_rmse):
-            r2_rmse = -10
+        # if np.isnan(r2_rmse):
+        #     r2_rmse = -10
 
-        # Check if r2_crps is NaN and replace it with -10
-        if np.isnan(r2_crps):
-            r2_crps = -10
+        # # Check if r2_crps is NaN and replace it with -10
+        # if np.isnan(r2_crps):
+        #     r2_crps = -10
 
     # Calculate the average of r2_rmse and r2_crps
     avg_r2_rmse = sum(r2_rmse_dict.values()) / num_cols

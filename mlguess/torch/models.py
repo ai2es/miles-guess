@@ -168,9 +168,9 @@ class DNN(torch.nn.Module):
         if y_scaler:
             mu = y_scaler.inverse_transform(mu)
 
-        for i in range(mu.shape[-1]):
-            aleatoric[:, i] *= self.training_var[i]
-            epistemic[:, i] *= self.training_var[i]
+            for i in range(mu.shape[-1]):
+                aleatoric[:, i] *= self.training_var[i]
+                epistemic[:, i] *= self.training_var[i]
 
         return mu, aleatoric, epistemic
 

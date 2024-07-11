@@ -81,7 +81,6 @@ class Trainer:
             commit_loss = 0.0
 
             with autocast(enabled=amp):
-
                 x = x.to(self.device)
                 y_pred = self.model(x)
                 gamma, nu, alpha, beta = y_pred
@@ -91,7 +90,7 @@ class Trainer:
                 # Metrics
                 y_pred = (_.cpu().detach() for _ in y_pred)
                 mu, ale, epi = self.model.predict_uncertainty(y_pred, y_scaler=transform)
-                total = np.sqrt(ale + epi)
+                total = ale + epi
                 if transform:
                     y = transform.inverse_transform(y.cpu())
                 metrics_dict = metrics(y, mu, total, split="train")
@@ -192,7 +191,7 @@ class Trainer:
                 # Metrics
                 y_pred = (_.cpu() for _ in y_pred)
                 mu, ale, epi = self.model.predict_uncertainty(y_pred, y_scaler=transform)
-                total = np.sqrt(ale + epi)
+                total = ale + epi
                 if transform:
                     y = transform.inverse_transform(y.cpu())
                 metrics_dict = metrics(y, mu, total, split="valid")
@@ -235,20 +234,14 @@ class Trainer:
 
     def predict(self, conf, test_loader, criterion, metrics, transform=None, split=None):
         self.model.eval()
-        valid_batches_per_epoch = conf['trainer']['valid_batches_per_epoch']
         distributed = True if conf["trainer"]["mode"] in ["fsdp", "ddp"] else False
 
         results_dict = defaultdict(list)
         mu_list, ale_list, epi_list, y_list = [], [], [], []
 
-        # Set up a custom tqdm
-        valid_batches_per_epoch = (
-            valid_batches_per_epoch if 0 < valid_batches_per_epoch < len(test_loader) else len(test_loader)
-        )
-
         batch_group_generator = tqdm.tqdm(
             enumerate(test_loader),
-            total=valid_batches_per_epoch,
+            total=len(test_loader),
             leave=True,
             disable=True if self.rank > 0 else False
         )
@@ -273,21 +266,18 @@ class Trainer:
                 batch_loss = torch.Tensor([loss.item()]).cuda(self.device)
                 if distributed:
                     torch.distributed.barrier()
-                results_dict["loss"].append(batch_loss[0].item())
+                results_dict[f"{split}_loss"].append(batch_loss[0].item())
 
                 # Print to tqdm
-                to_print = f"{split} loss: {np.mean(results_dict['loss']):.6f}"
+                to_print = f'{split} loss: {np.mean(results_dict[f"{split}_loss"]):.6f}'
                 if self.rank == 0:
                     batch_group_generator.set_description(to_print)
-
-                if i >= valid_batches_per_epoch and i > 0:
-                    break
 
         # Concatenate arrays
         mu = np.concatenate(mu_list, axis=0)
         ale = np.concatenate(ale_list, axis=0)
         epi = np.concatenate(epi_list, axis=0)
-        total = np.sqrt(ale + epi)
+        total = ale + epi
         y = np.concatenate(y_list, axis=0)
 
         if transform:
@@ -300,7 +290,7 @@ class Trainer:
             if distributed:
                 dist.all_reduce(value, dist.ReduceOp.AVG, async_op=False)
             results_dict[name].append(value[0].item())
-        results_dict["loss"] = np.mean(results_dict["loss"])
+        results_dict[f"{split}_loss"].append(np.mean(results_dict[f"{split}_loss"]))
 
         # Shutdown the progbar
         batch_group_generator.close()
@@ -393,14 +383,25 @@ class Trainer:
 
             else:
 
-                valid_results = self.validate(
-                    epoch,
+                valid_results = self.predict(
                     conf,
                     valid_loader,
                     valid_criterion,
                     metrics,
-                    transform
-                )
+                    transform,
+                    split="valid"
+                )["metrics"]
+
+                # this version of validation computes metrics batch-by-batch, which may affect metrics computed through binning
+
+                # valid_results = self.validate(
+                #     epoch,
+                #     conf,
+                #     valid_loader,
+                #     valid_criterion,
+                #     metrics,
+                #     transform
+                # )
 
             #################
             #
@@ -510,8 +511,8 @@ class Trainer:
             gc.collect()
 
             # Report result to the trial
-            if trial:
-                trial.report(results_dict[training_metric][-1], step=epoch)
+            # if trial:
+            #     trial.report(results_dict[training_metric][-1], step=epoch)
 
             # Stop training if we have not improved after X epochs (stopping patience)
             best_epoch = [
