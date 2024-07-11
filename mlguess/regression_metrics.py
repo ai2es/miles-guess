@@ -44,11 +44,14 @@ def regression_metrics(y_true, y_pred, total=None, split="val"):
         # Add PIT skill-score
         pitd = []
         for i, col in enumerate(range(y_true.shape[1])):
-            pit_score = pit_deviation_skill_score(
-                    y_true[:, i],
-                    np.stack([y_pred[:, i], total[:, i]], -1),
-                    pred_type="gaussian",
-                )
+            try:
+                pit_score = pit_deviation_skill_score(
+                        y_true[:, i],
+                        np.stack([y_pred[:, i], total[:, i]], -1),
+                        pred_type="gaussian",
+                    )
+            except ValueError:
+                pit_score = -1
             pitd.append(pit_score)
             metrics[f"{split}_pitd_{col}"] = pit_score
 

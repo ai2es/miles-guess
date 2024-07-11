@@ -77,51 +77,53 @@ class LinearNormalGamma(nn.Module):
         return mu, self.evidence(logv), self.evidence(logalpha) + 1, self.evidence(logbeta)
 
 
-class DNN(torch.nn.Module):
-
+class DNN(nn.Module):
     def __init__(self,
                  input_size,
                  output_size,
-                 block_sizes=[1000],
+                 layer_size=[1000],
                  dr=[0.5],
                  batch_norm=True,
                  lng=False,
-                 weight_init=False
-                 ):
+                 weight_init=False,
+                 num_layers=None):
 
-        input_size = len(input_size)
-        output_size = len(output_size)
+        input_size = len(input_size) if isinstance(input_size, (list, tuple)) else input_size
+        output_size = len(output_size) if isinstance(output_size, (list, tuple)) else output_size
 
         super(DNN, self).__init__()
         self.lng = lng
 
-        if len(block_sizes) > 0:
-            blocks = self.block(input_size, block_sizes[0], dr[0], batch_norm)
-            if len(block_sizes) > 1:
-                for i in range(len(block_sizes)-1):
-                    blocks += self.block(block_sizes[i], block_sizes[i+1], dr[i], batch_norm)
+        if num_layers is not None and isinstance(layer_size, (int, float)):
+            layer_size = [layer_size] * num_layers
+            dr = [dr] * num_layers if isinstance(dr, (int, float)) else dr
+
+        if len(layer_size) > 0:
+            blocks = self.block(input_size, layer_size[0], dr[0], batch_norm)
+            if len(layer_size) > 1:
+                for i in range(len(layer_size) - 1):
+                    blocks += self.block(layer_size[i], layer_size[i + 1], dr[i], batch_norm)
             if lng:
-                blocks.append(LinearNormalGamma(block_sizes[-1], output_size))
+                blocks.append(LinearNormalGamma(layer_size[-1], output_size))
             else:
-                blocks.append(SpectralNorm(torch.nn.Linear(block_sizes[-1], output_size)))
+                blocks.append(SpectralNorm(nn.Linear(layer_size[-1], output_size)))
         else:
             if lng:
                 blocks = [LinearNormalGamma(input_size, output_size)]
             else:
-                blocks = [SpectralNorm(torch.nn.Linear(input_size, output_size))]
-        self.fcn = torch.nn.Sequential(*blocks)
+                blocks = [SpectralNorm(nn.Linear(input_size, output_size))]
+
+        self.fcn = nn.Sequential(*blocks)
         if weight_init:
-            self.apply(init_weights)
+            self.apply(self.init_weights)
 
     def block(self, input_size, output_size, dr, batch_norm):
-        block = [
-            SpectralNorm(torch.nn.Linear(input_size, output_size))
-        ]
+        block = [SpectralNorm(nn.Linear(input_size, output_size))]
         if batch_norm:
-            block.append(torch.nn.BatchNorm1d(output_size))
-        block.append(torch.nn.LeakyReLU())
+            block.append(nn.BatchNorm1d(output_size))
+        block.append(nn.LeakyReLU())
         if dr > 0.0:
-            block.append(torch.nn.Dropout(dr))
+            block.append(nn.Dropout(dr))
         return block
 
     def forward(self, x):
