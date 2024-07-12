@@ -1,6 +1,7 @@
 import gc
 import logging
 import os
+import shutil
 from collections import defaultdict
 
 import numpy as np
@@ -493,18 +494,12 @@ class Trainer:
 
                     torch.save(state_dict, os.path.join(save_loc, "checkpoint.pt"))
 
-                # This needs updated!
-                # valid_loss = np.mean(valid_results["valid_loss"])
-                # # save if this is the best model seen so far
-                # if (self.rank == 0) and (np.mean(valid_loss) == min(results_dict["valid_loss"])):
-                #     if conf["trainer"]["mode"] == "ddp":
-                #         shutil.copy(f"{save_loc}/checkpoint_{self.device}.pt", f"{save_loc}/best_{self.device}.pt")
-                #     elif conf["trainer"]["mode"] == "fsdp":
-                #         if os.path.exists(f"{save_loc}/best"):
-                #             shutil.rmtree(f"{save_loc}/best")
-                #         shutil.copytree(f"{save_loc}/checkpoint", f"{save_loc}/best")
-                #     else:
-                #         shutil.copy(f"{save_loc}/checkpoint.pt", f"{save_loc}/best.pt")
+                # save if this is the best model seen so far
+                if (self.rank == 0) and (results_dict[training_metric] == min(results_dict[training_metric])):
+                    if conf["trainer"]["mode"] == "fsdp":
+                        pass
+                    else:
+                        shutil.copy(f"{save_loc}/checkpoint.pt", f"{save_loc}/best.pt")
 
             # clear the cached memory from the gpu
             torch.cuda.empty_cache()

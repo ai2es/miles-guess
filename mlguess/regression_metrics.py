@@ -2,7 +2,7 @@ from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 import numpy as np
 import pandas as pd
 import properscoring as ps
-from mlguess.pit import pit_deviation_skill_score
+from mlguess.pit import pit_deviation_skill_score, pit_histogram
 # from mlguess.regression_uq import calculate_skill_score
 
 
@@ -45,11 +45,25 @@ def regression_metrics(y_true, y_pred, total=None, split="val"):
         pitd = []
         for i, col in enumerate(range(y_true.shape[1])):
             try:
-                pit_score = pit_deviation_skill_score(
-                        y_true[:, i],
-                        np.stack([y_pred[:, i], total[:, i]], -1),
-                        pred_type="gaussian",
-                    )
+                # pit_score = pit_deviation_skill_score(
+                #         y_true[:, i],
+                #         np.stack([y_pred[:, i], total[:, i]], -1),
+                #         pred_type="gaussian",
+                #     )
+                bin_counts, bin_edges = pit_histogram(
+                    y_true[:, i],
+                    np.stack([y_pred[:, i], np.sqrt(total[:, i])], -1),
+                    pred_type="gaussian",
+                    bins=np.linspace(0, 1, 10),
+                )
+                bin_width = bin_edges[1] - bin_edges[0]
+
+                # Normalize the bin heights
+                bin_heights = bin_counts / bin_width
+                bin_heights /= sum(bin_heights)
+                y_pred = np.stack([y_pred[:, i], np.sqrt(total[:, i])], -1)
+                pit_score = pit_deviation_skill_score(y_true[:, i], y_pred, pred_type="gaussian", bins=10)
+
             except ValueError:
                 pit_score = -1
             pitd.append(pit_score)

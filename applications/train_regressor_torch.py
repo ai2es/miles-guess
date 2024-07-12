@@ -252,7 +252,7 @@ class Objective(BaseObjective):
 
         conf['trainer']['train_batch_size'] = conf['data']['batch_size']
         conf['trainer']['valid_batch_size'] = conf['data']['batch_size']
-        conf['valid_loss']['factor'] = conf['train_loss']['factor']
+        conf['valid_loss']['coef'] = conf['train_loss']['coef']
 
         try:
             return main(0, 1, conf, trial=trial)
@@ -263,9 +263,14 @@ class Objective(BaseObjective):
                     f"Pruning trial {trial.number} due to CUDA memory overflow: {str(E)}."
                 )
                 raise optuna.TrialPruned()
-            elif "non-singleton" in str(E) or "nan" in str(E):
+            elif "non-singleton" in str(E):
                 logging.warning(
                     f"Pruning trial {trial.number} due to shape mismatch: {str(E)}."
+                )
+                raise optuna.TrialPruned()
+            elif "infinity" in str(E) or "nan" in str(E):
+                logging.warning(
+                    f"Pruning trial {trial.number} due to encountering a nan in metrics calculations: {str(E)}."
                 )
                 raise optuna.TrialPruned()
             else:
