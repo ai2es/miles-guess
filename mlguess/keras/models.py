@@ -184,7 +184,7 @@ class CategoricalDNN(keras.models.Model):
             report_epoch_callback = ReportEpoch(e)
             self.loss = evidential_cat_loss(evi_coef=self.annealing_coeff,
                                             epoch_callback=report_epoch_callback)
-            self.callbacks = [report_epoch_callback]
+            self.callbacks.append(report_epoch_callback)
 
         super().compile(loss=self.loss,
                         optimizer=self.optimizer_obj,
@@ -427,7 +427,7 @@ class RegressorDNN(keras.models.Model):
             self.loss = gaussian_nll
         super().compile(optimizer=self.optimizer_obj, loss=self.loss)
         hist = super().fit(x, y, epochs=self.epochs, batch_size=self.batch_size, **kwargs)
-        self.training_var = np.var(x, axis=-1)
+        self.training_var = np.var(y, axis=-1)
 
         return hist
 
