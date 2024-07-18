@@ -239,6 +239,8 @@ def main(rank, world_size, conf, trial=False):
         trial=trial
     )
 
+    print(result)
+
     return result
 
 

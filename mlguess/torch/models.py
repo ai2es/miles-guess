@@ -163,18 +163,27 @@ class DNN(nn.Module):
         epistemic = beta / (v * (alpha - 1))
 
         if len(mu.shape) == 1:
-            mu = np.expand_dims(mu, 1)
-            aleatoric = np.expand_dims(aleatoric, 1)
-            epistemic = np.expand_dims(epistemic, 1)
+            mu = mu.unsqueeze(1)
+            aleatoric = aleatoric.unsqueeze(1)
+            epistemic = epistemic.unsqueeze(1)
 
         if y_scaler:
+            mu = mu.detach().cpu().numpy()
             mu = y_scaler.inverse_transform(mu)
+            mu = torch.from_numpy(mu).to(aleatoric.device)
+
+        # Torch version of some of the sklearn scalers -- this needs updated later
+        # MinMaxScaler inverse transform
+        # if y_scaler:
+        #     min_val = torch.tensor(y_scaler.data_min_, device=mu.device)
+        #     max_val = torch.tensor(y_scaler.data_max_, device=mu.device)
+        #     mu = mu * (max_val - min_val) + min_val
 
             for i in range(mu.shape[-1]):
                 aleatoric[:, i] *= self.training_var[i]
                 epistemic[:, i] *= self.training_var[i]
 
-        return mu, aleatoric, epistemic
+        return mu, aleatoric, epistemic, aleatoric + epistemic
 
     def predict_dropout(self, x, mc_forward_passes=10, batch_size=None):
         _batch_size = self.batch_size if batch_size is None else batch_size

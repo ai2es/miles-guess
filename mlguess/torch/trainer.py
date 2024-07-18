@@ -90,8 +90,7 @@ class Trainer:
 
                 # Metrics
                 y_pred = (_.cpu().detach() for _ in y_pred)
-                mu, ale, epi = self.model.predict_uncertainty(y_pred, y_scaler=transform)
-                total = ale + epi
+                mu, ale, epi, total = self.model.predict_uncertainty(y_pred, y_scaler=transform)
                 if transform:
                     y = transform.inverse_transform(y.cpu())
                 metrics_dict = metrics(y, mu, total, split="train")
@@ -191,8 +190,7 @@ class Trainer:
 
                 # Metrics
                 y_pred = (_.cpu() for _ in y_pred)
-                mu, ale, epi = self.model.predict_uncertainty(y_pred, y_scaler=transform)
-                total = ale + epi
+                mu, ale, epi, total = self.model.predict_uncertainty(y_pred, y_scaler=transform)
                 if transform:
                     y = transform.inverse_transform(y.cpu())
                 metrics_dict = metrics(y, mu, total, split="valid")
@@ -257,8 +255,7 @@ class Trainer:
 
                 # Metrics
                 y_pred = (_.cpu() for _ in y_pred)
-                mu, ale, epi = self.model.predict_uncertainty(y_pred, y_scaler=transform)
-
+                mu, ale, epi, total = self.model.predict_uncertainty(y_pred, y_scaler=transform)
                 mu_list.append(mu)
                 ale_list.append(ale)
                 epi_list.append(epi)
@@ -495,7 +492,7 @@ class Trainer:
                     torch.save(state_dict, os.path.join(save_loc, "checkpoint.pt"))
 
                 # save if this is the best model seen so far
-                if (self.rank == 0) and (results_dict[training_metric] == min(results_dict[training_metric])):
+                if (self.rank == 0) and (results_dict[training_metric][-1] == min(results_dict[training_metric])):
                     if conf["trainer"]["mode"] == "fsdp":
                         pass
                     else:

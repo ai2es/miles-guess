@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import properscoring as ps
 from mlguess.pit import pit_deviation_skill_score, pit_histogram
+import traceback
 # from mlguess.regression_uq import calculate_skill_score
 
 
@@ -45,25 +46,32 @@ def regression_metrics(y_true, y_pred, total=None, split="val"):
         pitd = []
         for i, col in enumerate(range(y_true.shape[1])):
             try:
-                # pit_score = pit_deviation_skill_score(
-                #         y_true[:, i],
-                #         np.stack([y_pred[:, i], total[:, i]], -1),
-                #         pred_type="gaussian",
-                #     )
+                # Ensure y_true, y_pred, and total are NumPy arrays
+                y_true_np = np.asarray(y_true[:, i])
+                y_pred_np = np.asarray(y_pred[:, i])
+                total_np = np.asarray(total[:, i])
+        
+                # Filter out infinity values
+                finite_mask = np.isfinite(y_true_np) & np.isfinite(y_pred_np) & np.isfinite(total_np)
+                y_true_finite = y_true_np[finite_mask]
+                y_pred_finite = y_pred_np[finite_mask]
+                total_finite = total_np[finite_mask]
+        
+                # Calculate PIT histogram
                 bin_counts, bin_edges = pit_histogram(
-                    y_true[:, i],
-                    np.stack([y_pred[:, i], np.sqrt(total[:, i])], -1),
+                    y_true_finite,
+                    np.stack([y_pred_finite, np.sqrt(total_finite)], -1),
                     pred_type="gaussian",
                     bins=np.linspace(0, 1, 10),
                 )
                 bin_width = bin_edges[1] - bin_edges[0]
-
+        
                 # Normalize the bin heights
                 bin_heights = bin_counts / bin_width
                 bin_heights /= sum(bin_heights)
-                y_pred = np.stack([y_pred[:, i], np.sqrt(total[:, i])], -1)
-                pit_score = pit_deviation_skill_score(y_true[:, i], y_pred, pred_type="gaussian", bins=10)
-
+                y_pred_stack = np.stack([y_pred_finite, np.sqrt(total_finite)], -1)
+                pit_score = pit_deviation_skill_score(y_true_finite, y_pred_stack, pred_type="gaussian", bins=10)
+        
             except ValueError:
                 pit_score = -1
             pitd.append(pit_score)
@@ -84,7 +92,15 @@ def regression_metrics(y_true, y_pred, total=None, split="val"):
         # metrics[f"{split}_crps_ss"] = r2_score(result['bin'], result['crps'], sample_weight=result["count"])
         # metrics[f"{split}_rmse_ss"] = r2_score(result['bin'], result['rmse'], sample_weight=result["count"])
 
-        rmse_ss = rmse_crps_skill_scores(y_true, y_pred, total, filter_top_percentile=0)
+        try:
+            rmse_ss = rmse_crps_skill_scores(y_true, y_pred, total, filter_top_percentile=0)
+        except:
+            print(traceback.print_exc())
+            rmse_ss = {
+                "r2_rmse": -100000,
+                "r2_crps": -100000
+            }
+
         metrics[f"{split}_r2_rmse_sigma"] = rmse_ss["r2_rmse"]
         metrics[f"{split}_r2_crps_sigma"] = rmse_ss["r2_crps"]
 
@@ -137,7 +153,11 @@ def calculate_skill_score(y_true, y_pred, sigma, num_bins=10, log=False, filter_
         df = pd.DataFrame({'y_true': y_true, 'y_pred': y_pred, 'sigma': sigma})
 
     # Dont use NaNs
-    df = df[np.isfinite(df)].copy()
+    df = df.replace([np.inf, -np.inf], np.nan).dropna()
+
+    # Add a small constant to sigma to avoid log(0) issues
+    epsilon = 1e-10
+    df['sigma'] = df['sigma'] + epsilon
 
     # Create bins based on the 'sigma' column
     if log:
