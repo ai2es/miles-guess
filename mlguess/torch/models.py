@@ -151,11 +151,13 @@ class DNN(nn.Module):
                 f"Failed to load model weights at {weights_path} due to error {str(E)}"
             )
 
-    def predict(self, input, y_scaler=None, return_uncertainties=True):
+    def predict(self, input, y_scaler=None, return_uncertainties=True, return_tuple=False):
         output = self(input)
         if return_uncertainties:
-            return self.predict_uncertainty(output, y_scaler=y_scaler)
-        return output
+            output = self.predict_uncertainty(output, y_scaler=y_scaler)
+        if return_tuple:
+            return output
+        return torch.cat(output, dim=1)
 
     def predict_uncertainty(self, input, y_scaler=None):
         mu, v, alpha, beta = input

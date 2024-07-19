@@ -90,7 +90,7 @@ class Trainer:
 
                 # Metrics
                 y_pred = (_.cpu().detach() for _ in y_pred)
-                mu, ale, epi, total = self.model.predict_uncertainty(y_pred, y_scaler=transform)
+                mu, ale, epi, total = self.model.predict_uncertainty(y_pred, y_scaler=transform, return_tuple=True)
                 if transform:
                     y = transform.inverse_transform(y.cpu())
                 metrics_dict = metrics(y, mu, total, split="train")
@@ -190,7 +190,7 @@ class Trainer:
 
                 # Metrics
                 y_pred = (_.cpu() for _ in y_pred)
-                mu, ale, epi, total = self.model.predict_uncertainty(y_pred, y_scaler=transform)
+                mu, ale, epi, total = self.model.predict_uncertainty(y_pred, y_scaler=transform, return_tuple=True)
                 if transform:
                     y = transform.inverse_transform(y.cpu())
                 metrics_dict = metrics(y, mu, total, split="valid")
@@ -255,7 +255,7 @@ class Trainer:
 
                 # Metrics
                 y_pred = (_.cpu() for _ in y_pred)
-                mu, ale, epi, total = self.model.predict_uncertainty(y_pred, y_scaler=transform)
+                mu, ale, epi, total = self.model.predict_uncertainty(y_pred, y_scaler=transform, return_tuple=True)
                 mu_list.append(mu)
                 ale_list.append(ale)
                 epi_list.append(epi)
