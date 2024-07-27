@@ -42,7 +42,7 @@ model:
     hidden_neurons: 500
     activation: "relu"
     optimizer: "adam"
-    metrics: "mae"
+    # metrics: "mae"
     lr: 0.0004727390951751
     kernel_reg: 'l2'
     l1_weight: 0.0
