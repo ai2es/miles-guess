@@ -257,6 +257,7 @@ class CategoricalDNN(keras.models.Model):
     def get_config(self):
         base_config = super().get_config()
         parameter_config = {hp: getattr(self, hp) for hp in self.hyperparameters}
+        parameter_config['callbacks'] = []
         return {**base_config, **parameter_config}
 
 
