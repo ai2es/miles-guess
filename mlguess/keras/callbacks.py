@@ -103,8 +103,9 @@ class MetricsCallback(keras.callbacks.Callback):
     def on_epoch_end(self, epoch, logs={}):
         if self.use_uncertainty:
             pred_probs, _, _, _ = self.model.predict(self.x, return_uncertainties=True)
+            pred_probs = pred_probs.numpy()
         else:
-            pred_probs = self.model.predict(self.x, return_uncertainties=False)
+            pred_probs = np.asarray(self.model.predict(self.x, return_uncertainties=False))
         logs[f"{self.name}_csi"] = self.mean_csi(pred_probs)
         true_labels = np.argmax(self.y, 1)
         pred_labels = np.argmax(pred_probs, 1)
