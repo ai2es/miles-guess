@@ -83,7 +83,7 @@ def trainer(conf, evaluate=True, data_split=0, mc_forward_passes=0):
     output_features = conf["output_features"]
     metric = conf["metric"]
     # flag for using the evidential model
-    if conf["model"]["loss"] == "evidential":
+    if conf["model"]["loss"] == "dirichlet":
         use_uncertainty = True
     else:
         use_uncertainty = False
@@ -177,11 +177,6 @@ def trainer(conf, evaluate=True, data_split=0, mc_forward_passes=0):
             x = scaled_data[f"{name}_x"]
             if use_uncertainty:
                 pred_probs, u, ale, epi = mlp.predict(x, return_uncertainties=True)
-                pred_probs = pred_probs.numpy()
-                u = u.numpy()
-                ale = ale.numpy()
-                epi = epi.numpy()
-                print(f"uncertainty: shape of pred probs: {np.shape(pred_probs)}")
                 entropy = np.zeros(pred_probs.shape)
                 mutual_info = np.zeros(pred_probs.shape)
             elif mc_forward_passes > 0:  # Compute epistemic uncertainty with MC dropout
@@ -190,7 +185,7 @@ def trainer(conf, evaluate=True, data_split=0, mc_forward_passes=0):
                     x, mc_forward_passes=mc_forward_passes)
                 u = np.zeros(pred_probs.shape)
             else:
-                pred_probs = mlp.predict(x, return_uncertainties=False)
+                pred_probs = mlp.predict(x)
                 ale = np.zeros(pred_probs.shape)
                 u = np.zeros(pred_probs.shape)
                 epi = np.zeros(pred_probs.shape)
