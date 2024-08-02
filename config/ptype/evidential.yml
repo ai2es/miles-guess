@@ -135,7 +135,7 @@ case_studies:
   - '2021-02-17'
   - '2021-02-18'
   - '2021-02-19'
-data_path: /glade/p/cisl/aiml/ai2es/winter_ptypes/ptype_qc/mPING_interpolated_QC2.parquet
+data_path: /glade/campaign/cisl/aiml/ai2es/winter_ptypes/ptype_qc/mPING_hourafter_interpolated_QC3.parquet
 direction: max
 ensemble:
   mc_steps: 0
@@ -147,24 +147,23 @@ input_features:
 - VGRD_m/s
 metric: val_ave_acc
 model:
-  activation: leaky
-  annealing_coeff: 34.593686950910275
-  balanced_classes: 1
-  batch_size: 100
-  dropout_alpha: 0.20146936081973893
-  epochs: 1000
-  hidden_layers: 2
-  hidden_neurons: 6461
+  activation: leaky_relu
+  annealing_coeff: 34
+  batch_size: 1130
+  dropout_alpha: 0.11676011477923032
+  epochs: 100
+  evidential: true
+  n_inputs: 84
+  hidden_layers: 4
+  hidden_neurons: 212
+  l2_weight: 0.000881889591229087
   loss: evidential
-  loss_weights:
-  - 58.64242174310205
-  - 94.59680461256323
-  - 124.5896569779261
-  - 227.38800030539545
-  lr: 0.0027750619126744817
+  lr: 0.004800502096767794
+  n_classes: 4
   optimizer: adam
+  output_activation: linear
   use_dropout: 1
-  verbose: 0
+  verbose: 1
 mping_path: /glade/p/cisl/aiml/ai2es/winter_ptypes/precip_rap/mPING_mixture/
 output_features:
 - ra_percent
