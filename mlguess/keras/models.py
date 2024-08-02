@@ -85,7 +85,7 @@ class CategoricalDNN(keras.models.Model):
                  annealing_coeff=1.0, use_noise=False, noise_sd=0.0, lr=0.001, use_dropout=False, dropout_alpha=0.2,
                  batch_size=128, epochs=2, kernel_reg=None, l1_weight=0.0, l2_weight=0.0, sgd_momentum=0.9,
                  adam_beta_1=0.9, adam_beta_2=0.999, epsilon=1e-7, decay=0, verbose=0, random_state=1000, n_classes=2,
-                 n_inputs=42, callbacks=None, **kwargs):
+                 n_inputs=42, callbacks=[], **kwargs):
 
         super().__init__(**kwargs)
         self.hidden_layers = hidden_layers
