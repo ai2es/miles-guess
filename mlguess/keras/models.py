@@ -478,5 +478,3 @@ class RegressorDNN(keras.models.Model):
         base_config = super().get_config()
         parameter_config = {hp: getattr(self, hp) for hp in self.hyperparameters}
         return {**base_config, **parameter_config}
-
-
