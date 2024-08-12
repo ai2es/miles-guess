@@ -2,32 +2,69 @@ import torch.nn.functional as F
 import torch
 
 
-
-"""
-
-    Categorical losses and utilities
-
-"""
-
 def get_device():
+    """
+    Get the device for PyTorch operations.
+
+    Returns:
+        torch.device: The device to use, either "cuda" if CUDA is available, otherwise "cpu".
+    """
     use_cuda = torch.cuda.is_available()
     device = torch.device("cuda" if use_cuda else "cpu")
     return device
 
 
 def relu_evidence(y):
+    """
+    Apply the ReLU activation function to the input tensor.
+
+    Args:
+        y (torch.Tensor): Input tensor.
+
+    Returns:
+        torch.Tensor: Tensor after applying the ReLU activation function.
+    """
     return F.relu(y)
 
 
 def exp_evidence(y):
+    """
+    Apply the exponential function to the input tensor with clamping.
+
+    Args:
+        y (torch.Tensor): Input tensor.
+
+    Returns:
+        torch.Tensor: Tensor after applying the exponential function with clamping.
+    """
     return torch.exp(torch.clamp(y, -10, 10))
 
 
 def softplus_evidence(y):
+    """
+    Apply the Softplus activation function to the input tensor.
+
+    Args:
+        y (torch.Tensor): Input tensor.
+
+    Returns:
+        torch.Tensor: Tensor after applying the Softplus activation function.
+    """
     return F.softplus(y)
 
 
 def kl_divergence(alpha, num_classes, device=None):
+    """
+    Compute the Kullback-Leibler divergence for a Dirichlet distribution.
+
+    Args:
+        alpha (torch.Tensor): The Dirichlet parameters (alpha).
+        num_classes (int): The number of classes.
+        device (optional, torch.device): Device to perform computation on. Defaults to None, which uses the default device.
+
+    Returns:
+        torch.Tensor: The KL divergence between the given Dirichlet distribution and a uniform distribution.
+    """
     if not device:
         device = get_device()
     ones = torch.ones([1, num_classes], dtype=torch.float32, device=device)
@@ -48,6 +85,17 @@ def kl_divergence(alpha, num_classes, device=None):
 
 
 def loglikelihood_loss(y, alpha, device=None):
+    """
+    Compute the log-likelihood loss for a Dirichlet distribution.
+
+    Args:
+        y (torch.Tensor): Target values.
+        alpha (torch.Tensor): The Dirichlet parameters (alpha).
+        device (optional, torch.device): Device to perform computation on. Defaults to None, which uses the default device.
+
+    Returns:
+        torch.Tensor: The computed log-likelihood loss.
+    """
     if not device:
         device = get_device()
     y = y.to(device)
@@ -62,6 +110,20 @@ def loglikelihood_loss(y, alpha, device=None):
 
 
 def mse_loss(y, alpha, epoch_num, num_classes, annealing_step, device=None):
+    """
+    Compute the mean squared error loss with KL divergence for Dirichlet distributions.
+
+    Args:
+        y (torch.Tensor): Target values.
+        alpha (torch.Tensor): The Dirichlet parameters (alpha).
+        epoch_num (int): The current epoch number.
+        num_classes (int): The number of classes.
+        annealing_step (int): The step at which annealing occurs.
+        device (optional, torch.device): Device to perform computation on. Defaults to None, which uses the default device.
+
+    Returns:
+        torch.Tensor: The computed MSE loss with KL divergence.
+    """
     if not device:
         device = get_device()
     y = y.to(device)
@@ -79,6 +141,22 @@ def mse_loss(y, alpha, epoch_num, num_classes, annealing_step, device=None):
 
 
 def edl_loss(func, y, alpha, epoch_num, num_classes, annealing_step, weights=None, device=None):
+    """
+    Compute the Evidence Deep Learning (EDL) loss.
+
+    Args:
+        func (callable): Function to apply to alpha (e.g., log, softplus).
+        y (torch.Tensor): Target values.
+        alpha (torch.Tensor): The Dirichlet parameters (alpha).
+        epoch_num (int): The current epoch number.
+        num_classes (int): The number of classes.
+        annealing_step (int): The step at which annealing occurs.
+        weights (optional, torch.Tensor): Weights to apply to the loss. Defaults to None.
+        device (optional, torch.device): Device to perform computation on. Defaults to None, which uses the default device.
+
+    Returns:
+        torch.Tensor: The computed EDL loss.
+    """
     y = y.to(device)
     alpha = alpha.to(device)
     S = torch.sum(alpha, dim=1, keepdim=True)
@@ -97,7 +175,23 @@ def edl_loss(func, y, alpha, epoch_num, num_classes, annealing_step, weights=Non
     kl_div = annealing_coef * kl_divergence(kl_alpha, num_classes, device=device)
     return A + kl_div
 
+
 def edl_mse_loss(output, target, epoch_num, num_classes, annealing_step, weights=None, device=None):
+    """
+    Compute the Evidence Deep Learning (EDL) loss with mean squared error.
+
+    Args:
+        output (torch.Tensor): Model output tensor.
+        target (torch.Tensor): Target values.
+        epoch_num (int): The current epoch number.
+        num_classes (int): The number of classes.
+        annealing_step (int): The step at which annealing occurs.
+        weights (optional, torch.Tensor): Weights to apply to the loss. Defaults to None.
+        device (optional, torch.device): Device to perform computation on. Defaults to None, which uses the default device.
+
+    Returns:
+        torch.Tensor: The computed EDL loss with MSE.
+    """
     if device is None:
         device = get_device()
     evidence = relu_evidence(output)
@@ -109,6 +203,21 @@ def edl_mse_loss(output, target, epoch_num, num_classes, annealing_step, weights
 
 
 def edl_log_loss(output, target, epoch_num, num_classes, annealing_step, weights=None, device=None):
+    """
+    Compute the Evidence Deep Learning (EDL) loss with the logarithm of evidence.
+
+    Args:
+        output (torch.Tensor): Model output tensor.
+        target (torch.Tensor): Target values.
+        epoch_num (int): The current epoch number.
+        num_classes (int): The number of classes.
+        annealing_step (int): The step at which annealing occurs.
+        weights (optional, torch.Tensor): Weights to apply to the loss. Defaults to None.
+        device (optional, torch.device): Device to perform computation on. Defaults to None, which uses the default device.
+
+    Returns:
+        torch.Tensor: The computed EDL loss with logarithmic evidence.
+    """
     if not device:
         device = get_device()
     evidence = relu_evidence(output)
@@ -124,11 +233,26 @@ def edl_log_loss(output, target, epoch_num, num_classes, annealing_step, weights
 def edl_digamma_loss(
     output, target, epoch_num, num_classes, annealing_step, weights=None, device=None
 ):
+    """
+    Compute the Evidence Deep Learning (EDL) loss with the digamma function of evidence.
+
+    Args:
+        output (torch.Tensor): Model output tensor.
+        target (torch.Tensor): Target values.
+        epoch_num (int): The current epoch number.
+        num_classes (int): The number of classes.
+        annealing_step (int): The step at which annealing occurs.
+        weights (optional, torch.Tensor): Weights to apply to the loss. Defaults to None.
+        device (optional, torch.device): Device to perform computation on. Defaults to None, which uses the default device.
+
+    Returns:
+        torch.Tensor: The computed EDL loss with digamma evidence.
+    """
     if not device:
         device = get_device()
     evidence = relu_evidence(output)
     alpha = evidence + 1
-    
+
     loss = torch.mean(
         edl_loss(
             torch.digamma, target, alpha, epoch_num, num_classes, annealing_step, weights, device

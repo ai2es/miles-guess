@@ -12,14 +12,41 @@ import torch.fft
 import tqdm
 from torch.cuda.amp import autocast
 import optuna
-#from credit.models.checkpoint import TorchFSDPCheckpointIO
 from mlguess.torch.checkpoint import TorchFSDPCheckpointIO
 
+
 def cleanup():
+    """
+    Clean up and destroy the process group for distributed training.
+
+    This function is used to release resources and finalize the distributed training environment
+    by destroying the process group. It should be called at the end of distributed training.
+
+    Returns:
+        None
+    """
+
     dist.destroy_process_group()
 
 
 def accum_log(log, new_logs):
+    """
+    Accumulate new log values into the existing log dictionary.
+
+    Args:
+        log (dict): The existing log dictionary to which new values will be added.
+        new_logs (dict): Dictionary containing new log values to be accumulated.
+
+    Returns:
+        dict: Updated log dictionary with accumulated values.
+
+    Example:
+        old_log = {'loss': 1.0, 'accuracy': 0.8}
+        new_log = {'loss': 0.5, 'accuracy': 0.9}
+        updated_log = accum_log(old_log, new_log)
+        # updated_log will be {'loss': 1.5, 'accuracy': 1.7}
+    """
+
     for key, new_value in new_logs.items():
         old_value = log.get(key, 0.)
         log[key] = old_value + new_value
@@ -27,8 +54,16 @@ def accum_log(log, new_logs):
 
 
 class Trainer:
-
     def __init__(self, model, rank, module=False):
+        """
+        Initialize the Trainer class.
+
+        Args:
+            model (nn.Module): The model to be trained.
+            rank (int): The rank of the current process (used for distributed training).
+            module (bool): Whether the model is wrapped in a `DistributedDataParallel` module. Default is False.
+        """
+
         super(Trainer, self).__init__()
         self.model = model
         self.rank = rank
@@ -50,6 +85,23 @@ class Trainer:
         metrics,
         transform=None
     ):
+        """
+        Train the model for one epoch.
+
+        Args:
+            epoch (int): The current epoch number.
+            conf (dict): Configuration dictionary containing training settings.
+            trainloader (DataLoader): DataLoader for the training dataset.
+            optimizer (torch.optim.Optimizer): Optimizer for updating model parameters.
+            criterion (callable): Loss function used for training.
+            scaler (torch.cuda.amp.GradScaler): Scaler for mixed precision training.
+            scheduler (torch.optim.lr_scheduler._LRScheduler): Learning rate scheduler.
+            metrics (dict): Dictionary of metric functions to evaluate model performance.
+            transform (optional, callable): Transformation function to apply to the data. Default is None.
+
+        Returns:
+            dict: Dictionary containing training metrics for the epoch.
+        """
 
         batches_per_epoch = conf['trainer']['batches_per_epoch']
         grad_accum_every = conf['trainer']['grad_accum_every']
@@ -158,6 +210,20 @@ class Trainer:
         metrics,
         transform=None
     ):
+        """
+        Validate the model on the validation dataset.
+
+        Args:
+            epoch (int): The current epoch number.
+            conf (dict): Configuration dictionary containing validation settings.
+            valid_loader (DataLoader): DataLoader for the validation dataset.
+            criterion (callable): Loss function used for validation.
+            metrics (dict): Dictionary of metric functions to evaluate model performance.
+            transform (optional, callable): Transformation function to apply to the data. Default is None.
+
+        Returns:
+            dict: Dictionary containing validation metrics for the epoch.
+        """
 
         self.model.eval()
 
@@ -231,7 +297,32 @@ class Trainer:
 
         return results_dict
 
-    def predict(self, conf, test_loader, criterion, metrics, transform=None, split=None):
+    def predict(
+        self,
+        conf,
+        test_loader,
+        criterion,
+        metrics,
+        transform=None,
+        split=None
+    ):
+        """
+        Make predictions with the model on the test dataset.
+
+        Args:
+            conf (dict): Configuration dictionary containing prediction settings.
+            test_loader (DataLoader): DataLoader for the test dataset.
+            criterion (callable): Loss function used for evaluating predictions.
+            metrics (dict): Dictionary of metric functions to evaluate model performance.
+            transform (optional, callable): Transformation function to apply to the data. Default is None.
+            split (optional, callable): Function to split the predictions if needed. Default is None.
+
+        Returns:
+            tuple: Tuple containing:
+                - predictions (torch.Tensor): The model's predictions on the test dataset.
+                - metrics (dict): Dictionary containing evaluation metrics.
+        """
+
         self.model.eval()
         distributed = True if conf["trainer"]["mode"] in ["fsdp", "ddp"] else False
 
@@ -323,6 +414,26 @@ class Trainer:
         transform=None,
         trial=False
     ):
+        """
+        Train and validate the model.
+
+        Args:
+            conf (dict): Configuration dictionary containing training and validation settings.
+            train_loader (DataLoader): DataLoader for the training dataset.
+            valid_loader (DataLoader): DataLoader for the validation dataset.
+            optimizer (torch.optim.Optimizer): Optimizer for updating model parameters.
+            train_criterion (callable): Loss function used for training.
+            valid_criterion (callable): Loss function used for validation.
+            scaler (torch.cuda.amp.GradScaler): Scaler for mixed precision training.
+            scheduler (torch.optim.lr_scheduler._LRScheduler): Learning rate scheduler.
+            metrics (dict): Dictionary of metric functions to evaluate model performance.
+            transform (optional, callable): Transformation function to apply to the data. Default is None.
+            trial (bool): Whether this is a trial run. Default is False.
+
+        Returns:
+            dict: Dictionary containing training and validation metrics.
+        """
+
         save_loc = conf['save_loc']
         start_epoch = conf['trainer']['start_epoch']
         epochs = conf['trainer']['epochs']

@@ -21,6 +21,29 @@ from torch.utils._pytree import tree_map
 # utils
 
 def load_model_state(conf, model, device):
+    """
+    Load the model state from a checkpoint file.
+
+    This function restores the model state from a saved checkpoint. It supports loading models from
+    different distributed training modes such as Fully Sharded Data Parallel (FSDP), Distributed Data Parallel (DDP),
+    or a standard non-distributed setup. Depending on the configuration, it either loads the unsharded model for FSDP
+    or directly updates the model's state dictionary for other modes.
+
+    Args:
+        conf (dict): Configuration dictionary containing paths and mode information.
+            - `save_loc` (str): Location where the checkpoint is saved.
+            - `trainer` (dict): Contains `mode` key which indicates the distributed training mode.
+        model (torch.nn.Module): The model to load the state into.
+        device (torch.device): The device to load the model state onto.
+
+    Returns:
+        torch.nn.Module: The model with its state loaded from the checkpoint.
+
+    Raises:
+        FileNotFoundError: If the checkpoint file does not exist at the specified location.
+        KeyError: If the checkpoint file does not contain the expected keys.
+    """
+
     save_loc = os.path.expandvars(conf['save_loc'])
     #  Load an optimizer, gradient scaler, and learning rate scheduler, the optimizer must come after wrapping model using FSDP
     ckpt = os.path.join(save_loc, "checkpoint.pt")
@@ -142,6 +165,22 @@ def is_safetensors_available() -> bool:
 
 
 class TorchFSDPCheckpointIO:
+    """
+    Handles loading and saving of checkpoints for models and optimizers
+    using Fully Sharded Data Parallel (FSDP) in PyTorch.
+
+    This class provides methods to load unsharded models and optimizers from
+    checkpoints, with special handling for FSDP models and optimizers. It
+    also manages the unwrapping of distributed models and the sharding of
+    optimizer state dictionaries.
+
+    Methods:
+        load_unsharded_model(model, checkpoint):
+            Loads the state dictionary into an unsharded model.
+
+        load_unsharded_optimizer(optimizer, checkpoint):
+            Loads the optimizer state dictionary into an unsharded optimizer.
+    """
     def __init__(self) -> None:
         super().__init__()
 
@@ -175,7 +214,7 @@ class TorchFSDPCheckpointIO:
         Save optimizer to checkpoint but only on master process.
         """
         fsdp_model = optimizer.unwrap_model()
-        full_optimizer_state = FSDP.full_optim_state_dict(fsdp_model, optim=optimizer, rank0_only=True)
+        full_optimizer_state = FSDP.optim_state_dict(fsdp_model, optim=optimizer)
         if rank == 0:
             save_state_dict(full_optimizer_state, checkpoint_file_path=checkpoint, use_safetensors=False)
 

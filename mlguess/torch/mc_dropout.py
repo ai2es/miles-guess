@@ -18,7 +18,7 @@ def monte_carlo_dropout(data_loader,
                         n_samples, 
                         batch_size=1024,
                         uncertainty=False):
-    
+
     """ Function to get the monte-carlo samples and uncertainty estimates
     through multiple forward passes
 
@@ -52,13 +52,13 @@ def monte_carlo_dropout(data_loader,
         dropout_predictions = np.vstack((dropout_predictions,
                                          predictions[np.newaxis, :, :]))
         # dropout predictions - shape (forward_passes, n_samples, n_classes)
-    
+
     # Calculating mean across multiple MCD forward passes 
     mean = np.mean(dropout_predictions, axis=0)  # shape (n_samples, n_classes)
 
     # Calculating variance across multiple MCD forward passes 
     variance = np.var(dropout_predictions, axis=0)  # shape (n_samples, n_classes)
-    
+
     results["mean"] = mean
     results["variance"] = variance
 
@@ -70,8 +70,8 @@ def monte_carlo_dropout(data_loader,
         # Calculating mutual information across multiple MCD forward passes 
         mutual_info = entropy - np.mean(np.sum(-dropout_predictions*np.log(dropout_predictions + epsilon),
                                                axis=-1), axis=0)  # shape (n_samples,)
-        
+
         results["entropy"] = entropy
         results["mutual_info"] = mutual_info
-    
+
     return results

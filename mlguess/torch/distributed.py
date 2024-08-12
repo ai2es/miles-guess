@@ -25,6 +25,18 @@ import logging
 
 
 def distributed_model_wrapper(conf, neural_network, device):
+    """
+    Wraps a neural network model in a distributed training wrapper (FSDP or DDP) based on configuration.
+
+    Args:
+        conf (dict): Configuration dictionary specifying the training setup, including the model type, 
+                     and training options such as mixed precision, CPU offloading, and activation checkpointing.
+        neural_network (torch.nn.Module): The neural network model to be wrapped.
+        device (torch.device): The device to which the model will be moved, usually a CUDA device.
+
+    Returns:
+        torch.nn.Module: The distributed model wrapped according to the configuration.
+    """
 
     # convert $USER to the actual user name
     conf['save_loc'] = os.path.expandvars(conf['save_loc'])

@@ -7,16 +7,30 @@ import torch.nn.functional as F
 tol = torch.finfo(torch.float32).eps
 
 
-# original loss used in Amini paper
-
-
 class EvidentialRegressionLoss:
+    """
+    Class for computing Evidential Regression Loss, which includes the Normal Inverse Gamma negative log likelihood
+    and a regularization term.
+
+    Args:
+        coef (float, optional): Coefficient for the regularization term. Defaults to 1.0.
+    """
     def __init__(self, coef=1.0):
         self.coef = coef
 
     def normal_inverse_gamma_nll(self, y, gamma, v, alpha, beta):
-        """Implements Normal Inverse Gamma-Negative Log Likelihood for
-        Deep Evidential Regression
+        """
+        Compute the Normal Inverse Gamma Negative Log Likelihood (NLL) for Deep Evidential Regression.
+
+        Args:
+            y (torch.Tensor): Target values.
+            gamma (torch.Tensor): Mean of the Normal-Inverse Gamma distribution.
+            v (torch.Tensor): Degrees of freedom of the distribution.
+            alpha (torch.Tensor): Shape parameter of the Normal-Inverse Gamma distribution.
+            beta (torch.Tensor): Scale parameter of the Normal-Inverse Gamma distribution.
+
+        Returns:
+            torch.Tensor: The computed negative log likelihood.
 
         Reference: https://www.mit.edu/~amini/pubs/pdf/deep-evidential-regression.pdf
         Source: https://github.com/hxu296/torch-evidental-deep-learning
@@ -31,18 +45,37 @@ class EvidentialRegressionLoss:
         return nll
 
     def normal_inverse_gamma_reg(self, y, gamma, v, alpha, beta):
-        """Implements Normal Inverse Gamma Regularizer for Deep Evidential
-        Regression
+        """
+        Compute the Normal Inverse Gamma Regularizer for Deep Evidential Regression.
 
-        Reference: https://www.mit.edu/~amini/pubs/pdf/deep-evidential-regression.pdf
-        Source: https://github.com/hxu296/torch-evidental-deep-learning
+        Args:
+            y (torch.Tensor): Target values.
+            gamma (torch.Tensor): Mean of the Normal-Inverse Gamma distribution.
+            v (torch.Tensor): Degrees of freedom of the distribution.
+            alpha (torch.Tensor): Shape parameter of the Normal-Inverse Gamma distribution.
+            beta (torch.Tensor): Scale parameter of the Normal-Inverse Gamma distribution.
+
+        Returns:
+            torch.Tensor: The computed regularization term.
         """
         error = F.l1_loss(y, gamma, reduction="none")
         evi = 2 * v + alpha
         return error * evi
 
     def __call__(self, gamma, v, alpha, beta, y):
-        """Calculate the Evidential Regression Loss"""
+        """
+        Compute the total Evidential Regression Loss which is the sum of the negative log likelihood and the regularization term.
+
+        Args:
+            gamma (torch.Tensor): Mean of the Normal-Inverse Gamma distribution.
+            v (torch.Tensor): Degrees of freedom of the distribution.
+            alpha (torch.Tensor): Shape parameter of the Normal-Inverse Gamma distribution.
+            beta (torch.Tensor): Scale parameter of the Normal-Inverse Gamma distribution.
+            y (torch.Tensor): Target values.
+
+        Returns:
+            torch.Tensor: The total computed loss.
+        """
         loss_nll = self.normal_inverse_gamma_nll(y, gamma, v, alpha, beta)
         loss_reg = self.normal_inverse_gamma_reg(y, gamma, v, alpha, beta)
         return loss_nll.mean() + self.coef * loss_reg.mean()
@@ -53,21 +86,23 @@ class EvidentialRegressionLoss:
 
 def modified_mse(gamma, nu, alpha, beta, target, reduction='mean'):
     """
-    Lipschitz MSE loss of the "Improving evidential deep learning via multitask learning."
+    Compute the Lipschitz Mean Squared Error (MSE) loss as described in "Improving Evidential Deep Learning via Multitask Learning."
+
+    Args:
+        gamma (torch.Tensor): Output of the evidential network.
+        nu (torch.Tensor): Output of the evidential network.
+        alpha (torch.Tensor): Output of the evidential network.
+        beta (torch.Tensor): Output of the evidential network.
+        target (torch.Tensor): True labels.
+        reduction (str, optional): Specifies the reduction to apply to the output. Can be 'mean', 'sum', or 'none'. Defaults to 'mean'.
+
+    Returns:
+        torch.Tensor: The computed modified MSE loss.
 
     Reference: https://www.mit.edu/~amini/pubs/pdf/deep-evidential-regression.pdf
     Source: https://github.com/deargen/MT-ENet/tree/468822188f52e517b1ee8e386eea607b2b7d8829
-
-    Args:
-        gamma ([FloatTensor]): the output of the ENet.
-        nu ([FloatTensor]): the output of the ENet.
-        alpha ([FloatTensor]): the output of the ENet.
-        beta ([FloatTensor]): the output of the ENet.
-        target ([FloatTensor]): true labels.
-        reduction (str, optional): . Defaults to 'mean'.
-    Returns:
-        [FloatTensor]: The loss value.
     """
+
     mse = (gamma-target)**2
     c = get_mse_coef(gamma, nu, alpha, beta, target).detach()
     mod_mse = mse*c
@@ -233,6 +268,15 @@ class EvidenceRegularizer(torch.nn.modules.loss._Loss):
 
 
 class LipschitzMSELoss(torch.nn.Module):
+    """
+    Compute the Lipschitz MSE loss, which includes the Evidential Marginal Likelihood, Evidence Regularizer,
+    and a modified MSE term.
+
+    Args:
+        tol (float, optional): Tolerance value to avoid division by zero. Defaults to 1e-8.
+        coef (float, optional): Coefficient for the regularization term. Defaults to 0.1.
+        reduction (str, optional): Specifies the method to reduce the loss over the batch. Can be 'mean', 'sum', or 'none'. Defaults to 'mean'.
+    """
     def __init__(self, tol=1e-8, coef=0.1, reduction='mean'):
         super(LipschitzMSELoss, self).__init__()
         self.tol = tol
@@ -242,6 +286,19 @@ class LipschitzMSELoss(torch.nn.Module):
         self.evidence_regularizer = EvidenceRegularizer(coef=coef, reduction=reduction)
 
     def forward(self, gamma, nu, alpha, beta, target):
+        """
+        Compute the total Lipschitz MSE Loss.
+
+        Args:
+            gamma (torch.Tensor): Output value of the evidential network for gamma.
+            nu (torch.Tensor): Output value of the evidential network for nu.
+            alpha (torch.Tensor): Output value of the evidential network for alpha.
+            beta (torch.Tensor): Output value of the evidential network for beta.
+            target (torch.Tensor): True labels.
+
+        Returns:
+            torch.Tensor: The total computed loss.
+        """
         loss = self.evidential_marginal_likelihood(gamma, nu, alpha, beta, target)
         loss += self.evidence_regularizer(gamma, nu, alpha, target)
         loss += modified_mse(gamma, nu, alpha, beta, target, reduction=self.reduction)
