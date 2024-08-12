@@ -338,3 +338,54 @@ class DNN(nn.Module):
         model = load_model_state(conf, model, device)
 
         return model
+
+class CategoricalDNN(DNN):
+
+    def calc_uncertainty(self, y_pred):
+        num_classes = y_pred.shape[-1]
+        evidence = torch.relu(y_pred)
+        alpha = evidence + 1
+        S = torch.sum(alpha, axis=1, keepdims=True)
+        u = num_classes / S
+        prob = alpha / S
+        epistemic = prob * (1 - prob) / (S + 1)
+        aleatoric = prob - prob ** 2 - epistemic
+        return prob, u, aleatoric, epistemic
+
+    def predict(self, x, return_uncertainties=True, **kwargs):
+        self.eval()
+        with torch.no_grad():
+            output = self(x)
+            if return_uncertainties:
+                return self.calc_uncertainty(output)
+            else:
+                return output
+
+    def predict_uncertainty(self, input):
+        return self.predict(input, return_uncertainties=True)
+
+    def predict_dropout(self, input):
+        raise NotImplementedError
+
+
+if __name__ == "__main__":
+    # Model parameters
+    input_size = 10
+    output_size = 4
+    batch_size = 16
+
+    # Initialize the model
+    model = CategoricalDNN(input_size=input_size, output_size=output_size)
+
+    # Example input data (batch size 1, input size 10)
+    example_data = torch.rand((batch_size, input_size), dtype=torch.float32)
+
+    # Pass data through the model
+    predictions = model(example_data)
+    print("Predictions:", predictions)
+
+    prob, u, aleatoric, epistemic = model.predict_uncertainty(example_data)
+    print("Predictions:", prob)
+    print("Evidential u:", u)
+    print("Aleatoric u:", aleatoric)
+    print("Epistemic u:", epistemic)

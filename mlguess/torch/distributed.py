@@ -29,7 +29,7 @@ def distributed_model_wrapper(conf, neural_network, device):
     Wraps a neural network model in a distributed training wrapper (FSDP or DDP) based on configuration.
 
     Args:
-        conf (dict): Configuration dictionary specifying the training setup, including the model type, 
+        conf (dict): Configuration dictionary specifying the training setup, including the model type,
                      and training options such as mixed precision, CPU offloading, and activation checkpointing.
         neural_network (torch.nn.Module): The neural network model to be wrapped.
         device (torch.device): The device to which the model will be moved, usually a CUDA device.
@@ -44,47 +44,9 @@ def distributed_model_wrapper(conf, neural_network, device):
     # FSDP polices
     if conf["trainer"]["mode"] == "fsdp":
 
-        # Define the sharding policies
-        # crossformer
-        if "crossformer" in conf["model"]["type"]:
-            from credit.models.crossformer import (
-                Attention, DynamicPositionBias, FeedForward, CrossEmbedLayer
-            )
-            transformer_layers_cls = {Attention, DynamicPositionBias, FeedForward, CrossEmbedLayer}
-
-        # FuXi
-        # FuXi supports "spectral_nrom = True" only
-        elif "fuxi" in conf["model"]["type"]:
-            from timm.models.swin_transformer_v2 import SwinTransformerV2Stage
-            transformer_layers_cls = {SwinTransformerV2Stage}
-
-        elif "fuxi-basic" in conf["model"]["type"]:
-            from credit.models.fuxi_basic import WindowAttentionV2, SwinLayer
-            transformer_layers_cls = {WindowAttentionV2, SwinLayer}
-
-        # Swin by itself
-        elif "swin" in conf["model"]["type"]:
-            from credit.models.swin import SwinTransformerV2CrBlock, WindowMultiHeadAttentionNoPos, WindowMultiHeadAttention
-            transformer_layers_cls = {SwinTransformerV2CrBlock, WindowMultiHeadAttentionNoPos, WindowMultiHeadAttention}
-
-        # other models not supported
-        else:
-            raise OSError("You asked for FSDP but only crossformer and fuxi are currently supported.")
-
-        auto_wrap_policy1 = functools.partial(
-            transformer_auto_wrap_policy,
-            transformer_layer_cls=transformer_layers_cls
-        )
-
-        auto_wrap_policy2 = functools.partial(
+        auto_wrap_policy = functools.partial(
             size_based_auto_wrap_policy, min_num_params=100_000
         )
-
-        def combined_auto_wrap_policy(module, recurse, nonwrapped_numel):
-            # Define a new policy that combines policies
-            p1 = auto_wrap_policy1(module, recurse, nonwrapped_numel)
-            p2 = auto_wrap_policy2(module, recurse, nonwrapped_numel)
-            return p1 or p2
 
         # Mixed precision
 
@@ -110,7 +72,7 @@ def distributed_model_wrapper(conf, neural_network, device):
         model = TorchFSDPModel(
             neural_network,
             use_orig_params=True,
-            auto_wrap_policy=combined_auto_wrap_policy,
+            auto_wrap_policy=auto_wrap_policy,
             mixed_precision=mixed_precision_policy,
             cpu_offload=CPUOffload(offload_params=cpu_offload)
         )
@@ -130,7 +92,7 @@ def distributed_model_wrapper(conf, neural_network, device):
                 checkpoint_impl=CheckpointImpl.NO_REENTRANT,
             )
 
-            check_fn = lambda submodule: any(isinstance(submodule, cls) for cls in transformer_layers_cls)
+            check_fn = lambda submodule: any(isinstance(submodule, cls) for cls in auto_wrap_policy)
 
             apply_activation_checkpointing(
                 model,

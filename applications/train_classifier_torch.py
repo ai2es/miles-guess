@@ -25,9 +25,9 @@ from mlguess.torch.checkpoint import (
     FSDPOptimizerWrapper,
     TorchFSDPCheckpointIO
 )
-from mlguess.torch.trainer import Trainer
-from mlguess.torch.regression_losses import LipschitzMSELoss
-from mlguess.torch.models import seed_everything, DNN
+from mlguess.torch.trainer_classifier import Trainer
+from mlguess.torch.class_losses import edl_digamma_loss
+from mlguess.torch.models import seed_everything, DNN, CategoricalDNN
 from mlguess.regression_metrics import regression_metrics
 
 warnings.filterwarnings("ignore")
@@ -99,7 +99,7 @@ def load_dataset_and_sampler(conf, world_size, rank, is_train, seed=42):
 
     # Z-score
     torch_dataset = import_class_from_path(conf["data"]["dataset_name"], conf["data"]["dataset_path"])
-    dataset = torch_dataset(conf, split='train' if is_train else 'valid')
+    dataset = torch_dataset(conf, split='train' if is_train else 'val')
 
     # Pytorch sampler
     sampler = DistributedSampler(
@@ -211,6 +211,7 @@ def main(rank, world_size, conf, trial=False):
 
     # convert $USER to the actual user name
     conf['save_loc'] = os.path.expandvars(conf['save_loc'])
+    uncertainty = conf['model']['lng']
 
     if conf["trainer"]["mode"] in ["fsdp", "ddp"]:
         setup(rank, world_size, conf["trainer"]["mode"])
@@ -259,11 +260,11 @@ def main(rank, world_size, conf, trial=False):
 
     # model
 
-    m = DNN(**conf["model"])
+    m = CategoricalDNN(**conf["model"])
 
     # add the variance computed in the dataset to the model
 
-    m.training_var = train_dataset.training_var
+    # m.training_var = train_dataset.training_var
 
     # have to send the module to the correct device first
 
@@ -281,14 +282,23 @@ def main(rank, world_size, conf, trial=False):
     # train_criterion = EvidentialRegressionLoss(coef=10.84134458514458)
     # valid_criterion = EvidentialRegressionLoss(coef=10.84134458514458)
 
-    train_criterion = LipschitzMSELoss(**conf["train_loss"])
-    valid_criterion = LipschitzMSELoss(**conf["valid_loss"])
+    # train_criterion = LipschitzMSELoss(**conf["train_loss"])
+    # valid_criterion = LipschitzMSELoss(**conf["valid_loss"])
+
+    train_criterion = edl_digamma_loss
+    valid_criterion = edl_digamma_loss
 
     # Initialize a trainer object
 
-    trainer = Trainer(model, rank, module=(conf["trainer"]["mode"] == "ddp"))
+    trainer = Trainer(
+        model,
+        rank,
+        module=(conf["trainer"]["mode"] == "ddp"),
+        uncertainty=uncertainty
+    )
 
     # Fit the model
+    classifier_metrics = {}
 
     result = trainer.fit(
         conf,
@@ -299,8 +309,8 @@ def main(rank, world_size, conf, trial=False):
         valid_criterion,
         scaler,
         scheduler,
-        regression_metrics,
-        transform=train_dataset.y_scaler,
+        classifier_metrics,
+        transform=None,
         trial=trial
     )
 

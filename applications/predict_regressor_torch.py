@@ -3,7 +3,6 @@ import os
 import sys
 import yaml
 import wandb
-import optuna
 import shutil
 import logging
 import pandas as pd
@@ -12,7 +11,6 @@ import importlib
 from pathlib import Path
 from argparse import ArgumentParser
 from collections import defaultdict
-from echo.src.base_objective import BaseObjective
 
 import torch
 import torch.distributed as dist
@@ -41,11 +39,34 @@ os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 
 
 def setup(rank, world_size, mode):
+    """
+    Initialize the process group for distributed training.
+
+    Args:
+        rank (int): The rank of the current process in the distributed training.
+        world_size (int): The total number of processes involved in distributed training.
+        mode (str): The mode of training (e.g., 'fsdp' or 'ddp').
+
+    Logs:
+        Information about the distributed training setup.
+    """
+
     logging.info(f"Running {mode.upper()} on rank {rank} with world_size {world_size}.")
     dist.init_process_group("nccl", rank=rank, world_size=world_size)
 
 
 def import_class_from_path(class_name, file_path):
+    """
+    Import a class from a file path.
+
+    Args:
+        class_name (str): The name of the class to import.
+        file_path (str): The file path of the module containing the class.
+
+    Returns:
+        type: The imported class.
+    """
+
     spec = importlib.util.spec_from_file_location(class_name, file_path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -53,6 +74,22 @@ def import_class_from_path(class_name, file_path):
 
 
 def load_dataset_and_sampler(conf, world_size, rank, split, seed=42):
+    """
+    Load a dataset and its corresponding distributed sampler based on the configuration.
+
+    Args:
+        conf (dict): Configuration dictionary specifying dataset and sampler settings.
+        world_size (int): The total number of processes involved in distributed training.
+        rank (int): The rank of the current process.
+        is_train (bool): Whether to load the training or validation dataset.
+        seed (int, optional): Random seed for sampling. Defaults to 42.
+
+    Returns:
+        tuple: A tuple containing the dataset and the distributed sampler.
+
+    Logs:
+        Information about the dataset and sampler loaded.
+    """
 
     # Use the function to import your script
     torch_dataset = import_class_from_path(conf["data"]["dataset_name"], conf["data"]["dataset_path"])
@@ -207,33 +244,6 @@ def main(rank, world_size, conf, trial=False):
     mets.to_csv(os.path.join(conf['save_loc'], "metrics.csv"))
 
     return result
-
-
-class Objective(BaseObjective):
-    def __init__(self, config, metric="val_loss", device="cpu"):
-
-        # Initialize the base class
-        BaseObjective.__init__(self, config, metric, device)
-
-    def train(self, trial, conf):
-
-        try:
-            return main(0, 1, conf, trial=trial)
-
-        except Exception as E:
-            if "CUDA" in str(E) or "non-singleton" in str(E):
-                logging.warning(
-                    f"Pruning trial {trial.number} due to CUDA memory overflow: {str(E)}."
-                )
-                raise optuna.TrialPruned()
-            elif "non-singleton" in str(E):
-                logging.warning(
-                    f"Pruning trial {trial.number} due to shape mismatch: {str(E)}."
-                )
-                raise optuna.TrialPruned()
-            else:
-                logging.warning(f"Trial {trial.number} failed due to error: {str(E)}.")
-                raise E
 
 
 if __name__ == "__main__":

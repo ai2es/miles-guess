@@ -1,6 +1,8 @@
 import torch.nn.functional as F
 import torch
 
+# Adapted from https://github.com/dougbrion/pytorch-classification-uncertainty/blob/master/losses.py
+
 
 def get_device():
     """

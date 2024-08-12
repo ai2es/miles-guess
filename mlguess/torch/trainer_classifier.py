@@ -54,7 +54,7 @@ def accum_log(log, new_logs):
 
 
 class Trainer:
-    def __init__(self, model, rank, module=False):
+    def __init__(self, model, rank, module=False, uncertainty=False):
         """
         Initialize the Trainer class.
 
@@ -71,6 +71,8 @@ class Trainer:
 
         if module:
             self.model = self.model.module
+
+        self.uncertainty = uncertainty
 
     # Training function.
     def train_one_epoch(
@@ -131,30 +133,31 @@ class Trainer:
 
             logs = {}
 
-            commit_loss = 0.0
-
             with autocast(enabled=amp):
                 x = x.to(self.device)
                 y_pred = self.model(x)
-                gamma, nu, alpha, beta = y_pred
                 y = y.to(device=self.device, dtype=x.dtype)
-                loss = criterion(gamma, nu, alpha, beta, y.to(x.dtype))
+
+                if self.uncertainty:
+                    loss = criterion(y_pred, y, epoch, y.shape[-1], 10, self.device)
+                    mu, ale, epi, total = self.model.predict_uncertainty(y_pred)
+                else:
+                    _, mu = torch.max(y_pred, 1)
+                    loss = criterion(y_pred, y)
 
                 # Metrics
                 y_pred = (_.cpu().detach() for _ in y_pred)
-                mu, ale, epi, total = self.model.predict_uncertainty(y_pred, y_scaler=transform)
                 if transform:
                     y = transform.inverse_transform(y.cpu())
-                else:
-                    y = y.cpu()
-                metrics_dict = metrics(y, mu.numpy(), total, split="train")
-                for name, value in metrics_dict.items():
-                    value = torch.Tensor([value]).cuda(self.device, non_blocking=True)
-                    if distributed:
-                        dist.all_reduce(value, dist.ReduceOp.AVG, async_op=False)
-                    results_dict[name].append(value[0].item())
 
-                loss = loss.mean() + commit_loss
+                # metrics_dict = metrics(y, mu, total, split="train")
+                # for name, value in metrics_dict.items():
+                #     value = torch.Tensor([value]).cuda(self.device, non_blocking=True)
+                #     if distributed:
+                #         dist.all_reduce(value, dist.ReduceOp.AVG, async_op=False)
+                #     results_dict[name].append(value[0].item())
+
+                loss = loss.mean()
 
                 scaler.scale(loss / grad_accum_every).backward()
 
@@ -258,10 +261,10 @@ class Trainer:
 
                 # Metrics
                 y_pred = (_.cpu() for _ in y_pred)
-                mu, ale, epi, total = self.model.predict_uncertainty(y_pred, y_scaler=transform)
+                mu, ale, epi, total = self.model.predict_uncertainty(y_pred, y_scaler=transform, return_tuple=True)
                 if transform:
                     y = transform.inverse_transform(y.cpu())
-                metrics_dict = metrics(y, mu.numpy(), total, split="valid")
+                metrics_dict = metrics(y, mu, total, split="valid")
 
                 for name, value in metrics_dict.items():
                     value = torch.Tensor([value]).cuda(self.device, non_blocking=True)
@@ -348,7 +351,7 @@ class Trainer:
 
                 # Metrics
                 y_pred = (_.cpu() for _ in y_pred)
-                mu, ale, epi, total = self.model.predict_uncertainty(y_pred, y_scaler=transform)
+                mu, ale, epi, total = self.model.predict_uncertainty(y_pred, y_scaler=transform, return_tuple=True)
                 mu_list.append(mu)
                 ale_list.append(ale)
                 epi_list.append(epi)
