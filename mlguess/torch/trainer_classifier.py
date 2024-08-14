@@ -53,6 +53,12 @@ def accum_log(log, new_logs):
     return log
 
 
+def one_hot_embedding(labels, num_classes=4):
+    # Convert to One Hot Encoding
+    y = torch.eye(num_classes).to(labels.device)
+    return y[labels.long()].float()
+
+
 class Trainer:
     def __init__(self, model, rank, module=False, uncertainty=False):
         """
@@ -84,8 +90,7 @@ class Trainer:
         criterion,
         scaler,
         scheduler,
-        metrics,
-        transform=None
+        metrics
     ):
         """
         Train the model for one epoch.
@@ -137,25 +142,27 @@ class Trainer:
                 x = x.to(self.device)
                 y_pred = self.model(x)
                 y = y.to(device=self.device, dtype=x.dtype)
+                y_true_one_hot = one_hot_embedding(y)
+                predicted = torch.argmax(y_pred, 1)
 
                 if self.uncertainty:
-                    loss = criterion(y_pred, y, epoch, y.shape[-1], 10, self.device)
-                    mu, ale, epi, total = self.model.predict_uncertainty(y_pred)
+                    # loss = criterion(y_pred, one_hot_embedding(y), epoch, num_classes, 10, self.device)
+                    # y_pred, _, _, total = self.model.calc_uncertainty(y_pred)
+                    loss = criterion(y_pred, y_true_one_hot, epoch, self.device)
                 else:
-                    _, mu = torch.max(y_pred, 1)
                     loss = criterion(y_pred, y)
 
-                # Metrics
-                y_pred = (_.cpu().detach() for _ in y_pred)
-                if transform:
-                    y = transform.inverse_transform(y.cpu())
+                match = torch.eq(predicted, y).float().view(-1, 1)
+                acc = torch.mean(match)
 
-                # metrics_dict = metrics(y, mu, total, split="train")
-                # for name, value in metrics_dict.items():
-                #     value = torch.Tensor([value]).cuda(self.device, non_blocking=True)
-                #     if distributed:
-                #         dist.all_reduce(value, dist.ReduceOp.AVG, async_op=False)
-                #     results_dict[name].append(value[0].item())
+                # Metrics
+                # y_pred = (_.cpu().detach() for _ in y_pred)
+                metrics_dict = metrics(y_true_one_hot, y_pred, split="train")
+                for name, value in metrics_dict.items():
+                    value = torch.Tensor([value]).cuda(self.device, non_blocking=True)
+                    if distributed:
+                        dist.all_reduce(value, dist.ReduceOp.AVG, async_op=False)
+                    results_dict[name].append(value[0].item())
 
                 loss = loss.mean()
 
@@ -174,6 +181,7 @@ class Trainer:
             if distributed:
                 dist.all_reduce(batch_loss, dist.ReduceOp.AVG, async_op=False)
             results_dict["train_loss"].append(batch_loss[0].item())
+            results_dict["train_acc"].append(acc.item())
 
             if not np.isfinite(np.mean(results_dict["train_loss"])):
                 try:
@@ -182,10 +190,10 @@ class Trainer:
                     raise E
 
             # agg the results
-            to_print = "Epoch: {} train_loss: {:.6f} train_mae: {:.6f}".format(
+            to_print = "Epoch: {} train_loss: {:.6f} train_acc: {:.6f}".format(
                 epoch,
                 np.mean(results_dict["train_loss"]),
-                np.mean(results_dict["train_mae"]),
+                np.mean(results_dict["train_ave_acc"]),
             )
             to_print += " lr: {:.12f}".format(optimizer.param_groups[0]["lr"])
             if self.rank == 0:
@@ -212,8 +220,7 @@ class Trainer:
         conf,
         valid_loader,
         criterion,
-        metrics,
-        transform=None
+        metrics
     ):
         """
         Validate the model on the validation dataset.
@@ -254,18 +261,23 @@ class Trainer:
 
             with torch.no_grad():
                 x = x.to(self.device)
+                y = y.to(self.device)
+                y_true_one_hot = one_hot_embedding(y)
                 y_pred = self.model(x)
-                gamma, nu, alpha, beta = y_pred
-                y = y.to(device=self.device, dtype=x.dtype)
-                loss = criterion(gamma, nu, alpha, beta, y)
+                predicted = torch.argmax(y_pred, 1)
+
+                if self.uncertainty:
+                    loss = criterion(y_pred, y_true_one_hot, epoch, self.device)
+                    # loss = criterion(y_pred, one_hot_embedding(y), epoch, num_classes, 10, self.device)
+                    # y_pred, ale, epi, total = self.model.calc_uncertainty(y_pred)
+                else:
+                    loss = criterion(y_pred, y)
+
+                match = torch.eq(predicted, y).float().view(-1, 1)
+                acc = torch.mean(match)
 
                 # Metrics
-                y_pred = (_.cpu() for _ in y_pred)
-                mu, ale, epi, total = self.model.predict_uncertainty(y_pred, y_scaler=transform, return_tuple=True)
-                if transform:
-                    y = transform.inverse_transform(y.cpu())
-                metrics_dict = metrics(y, mu, total, split="valid")
-
+                metrics_dict = metrics(y_true_one_hot, y_pred, split="valid")
                 for name, value in metrics_dict.items():
                     value = torch.Tensor([value]).cuda(self.device, non_blocking=True)
                     if distributed:
@@ -276,12 +288,13 @@ class Trainer:
                 if distributed:
                     torch.distributed.barrier()
                 results_dict["valid_loss"].append(batch_loss[0].item())
+                results_dict["valid_acc"].append(acc.item())
 
                 # print to tqdm
-                to_print = "Epoch: {} valid_loss: {:.6f} valid_mae: {:.6f}".format(
+                to_print = "Epoch: {} valid_loss: {:.6f} valid_acc: {:.6f}".format(
                     epoch,
                     np.mean(results_dict["valid_loss"]),
-                    np.mean(results_dict["valid_mae"])
+                    np.mean(results_dict["valid_ave_acc"])
                 )
                 if self.rank == 0:
                     batch_group_generator.set_description(to_print)
@@ -308,7 +321,6 @@ class Trainer:
         test_loader,
         criterion,
         metrics,
-        transform=None,
         split=None
     ):
         """
@@ -344,17 +356,24 @@ class Trainer:
         for i, (x, y) in batch_group_generator:
             with torch.no_grad():
                 x = x.to(self.device)
+                y = y.to(self.device)
+                y_true_one_hot = one_hot_embedding(y)
                 y_pred = self.model(x)
-                gamma, nu, alpha, beta = y_pred
-                y = y.to(device=self.device, dtype=x.dtype)
-                loss = criterion(gamma, nu, alpha, beta, y)
+                predicted = torch.argmax(y_pred, 1)
 
-                # Metrics
-                y_pred = (_.cpu() for _ in y_pred)
-                mu, ale, epi, total = self.model.predict_uncertainty(y_pred, y_scaler=transform, return_tuple=True)
-                mu_list.append(mu)
-                ale_list.append(ale)
-                epi_list.append(epi)
+                if self.uncertainty:
+                    loss = criterion(y_pred, y_true_one_hot, 0, self.device)
+                    y_pred, ale, epi, total = self.model.calc_uncertainty(y_pred)
+                else:
+                    loss = criterion(y_pred, y)
+
+                match = torch.eq(predicted, y).float().view(-1, 1)
+                acc = torch.mean(match)
+
+                # Accumulate results
+                mu_list.append(y_pred.cpu())
+                ale_list.append(ale.cpu())
+                epi_list.append(epi.cpu())
                 y_list.append(y.cpu())
 
                 batch_loss = torch.Tensor([loss.item()]).cuda(self.device)
@@ -374,11 +393,8 @@ class Trainer:
         total = ale + epi
         y = np.concatenate(y_list, axis=0)
 
-        if transform:
-            y = transform.inverse_transform(y)
-
         # Compute metrics
-        metrics_dict = metrics(y, mu, total, split=split)
+        metrics_dict = metrics(one_hot_embedding(torch.tensor(y)), torch.tensor(mu), split="test")
         for name, value in metrics_dict.items():
             value = torch.Tensor([value]).cuda(self.device, non_blocking=True)
             if distributed:
@@ -416,7 +432,6 @@ class Trainer:
         scaler,
         scheduler,
         metrics,
-        transform=None,
         trial=False
     ):
         """
@@ -481,8 +496,7 @@ class Trainer:
                 train_criterion,
                 scaler,
                 scheduler,
-                metrics,
-                transform
+                metrics
             )
 
             ############
@@ -497,25 +511,23 @@ class Trainer:
 
             else:
 
-                valid_results = self.predict(
-                    conf,
-                    valid_loader,
-                    valid_criterion,
-                    metrics,
-                    transform,
-                    split="valid"
-                )["metrics"]
-
-                # this version of validation computes metrics batch-by-batch, which may affect metrics computed through binning
-
-                # valid_results = self.validate(
-                #     epoch,
+                # valid_results = self.predict(
                 #     conf,
                 #     valid_loader,
                 #     valid_criterion,
                 #     metrics,
-                #     transform
-                # )
+                #     split="valid"
+                # )["metrics"]
+
+                # this version of validation computes metrics batch-by-batch, which may affect metrics computed through binning
+
+                valid_results = self.validate(
+                    epoch,
+                    conf,
+                    valid_loader,
+                    valid_criterion,
+                    metrics,
+                )
 
             #################
             #
@@ -619,8 +631,8 @@ class Trainer:
             gc.collect()
 
             # Report result to the trial
-            # if trial:
-            #     trial.report(results_dict[training_metric][-1], step=epoch)
+            if trial:
+                trial.report(results_dict[training_metric][-1], step=epoch)
 
             # Stop training if we have not improved after X epochs (stopping patience)
             best_epoch = [

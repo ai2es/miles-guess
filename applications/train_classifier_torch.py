@@ -1,12 +1,14 @@
 import warnings
 import os
 import sys
+import copy
 import yaml
 import wandb
 import optuna
 import shutil
 import logging
 import importlib
+import numpy as np
 
 from pathlib import Path
 from argparse import ArgumentParser
@@ -26,9 +28,11 @@ from mlguess.torch.checkpoint import (
     TorchFSDPCheckpointIO
 )
 from mlguess.torch.trainer_classifier import Trainer
-from mlguess.torch.class_losses import edl_digamma_loss
-from mlguess.torch.models import seed_everything, DNN, CategoricalDNN
-from mlguess.regression_metrics import regression_metrics
+from mlguess.torch.class_losses import EDLDigammaLoss
+from mlguess.torch.models import seed_everything, CategoricalDNN
+from mlguess.keras.data import load_ptype_uq, preprocess_data
+from mlguess.torch.metrics import MetricsCalculator
+from torch.utils.data import TensorDataset
 
 warnings.filterwarnings("ignore")
 
@@ -98,8 +102,46 @@ def load_dataset_and_sampler(conf, world_size, rank, is_train, seed=42):
     """
 
     # Z-score
-    torch_dataset = import_class_from_path(conf["data"]["dataset_name"], conf["data"]["dataset_path"])
-    dataset = torch_dataset(conf, split='train' if is_train else 'val')
+    # torch_dataset = import_class_from_path(conf["data"]["dataset_name"], conf["data"]["dataset_path"])
+    # dataset = torch_dataset(conf, split='train' if is_train else 'val')
+
+    input_features = []
+    for features in ["TEMP_C", "T_DEWPOINT_C", "UGRD_m/s", "VGRD_m/s"]:
+        input_features += conf["data"][features]
+    output_features = conf["data"]["ptypes"]
+
+    # Load data
+    _conf = copy.deepcopy(conf)
+    _conf.update(conf["data"])
+    data = load_ptype_uq(_conf, data_split=0, verbose=1, drop_mixed=False)
+    # check if we should scale the input data by groups
+    scale_groups = [] if "scale_groups" not in conf["data"] else conf["data"]["scale_groups"]
+    groups = [list(conf["data"][g]) for g in scale_groups]
+    leftovers = list(
+        set(input_features)
+        - set([row for group in scale_groups for row in conf["data"][group]])
+    )
+    if len(leftovers):
+        groups.append(leftovers)
+    # scale the data
+    scaled_data, scalers = preprocess_data(
+        data,
+        input_features,
+        output_features,
+        scaler_type=conf["data"]["scaler_type"],
+        encoder_type="onehot",
+        groups=[],
+    )
+
+    if is_train:
+        X_train = torch.FloatTensor(scaled_data["train_x"].values)
+        y_train = torch.LongTensor(np.argmax(scaled_data["train_y"], axis=-1))
+    else:
+        X_train = torch.FloatTensor(scaled_data["val_x"].values)
+        y_train = torch.LongTensor(np.argmax(scaled_data["val_y"], axis=-1))
+
+    # Create dataset and dataloader
+    dataset = TensorDataset(X_train, y_train)
 
     # Pytorch sampler
     sampler = DistributedSampler(
@@ -211,7 +253,14 @@ def main(rank, world_size, conf, trial=False):
 
     # convert $USER to the actual user name
     conf['save_loc'] = os.path.expandvars(conf['save_loc'])
-    uncertainty = conf['model']['lng']
+    # Assuming `conf` is a dictionary containing your configuration
+    trainer_config = conf.get('trainer', {})
+    # Get KL loss coefficient with a default value of 10 if not present
+    kl_loss_coefficient = trainer_config.get('kl_loss_coefficient', 10)
+    # Get uncertainty with a default value of False if not present
+    uncertainty = trainer_config.get('uncertainty', False)
+    # Number of class labels present
+    num_classes = conf["model"]["output_size"]
 
     if conf["trainer"]["mode"] in ["fsdp", "ddp"]:
         setup(rank, world_size, conf["trainer"]["mode"])
@@ -240,7 +289,7 @@ def main(rank, world_size, conf, trial=False):
     train_loader = torch.utils.data.DataLoader(
         train_dataset,
         batch_size=train_batch_size,
-        shuffle=False,
+        shuffle=False,  # sampler handles shuffling
         sampler=train_sampler,
         pin_memory=True,
         persistent_workers=True if thread_workers > 0 else False,
@@ -262,10 +311,6 @@ def main(rank, world_size, conf, trial=False):
 
     m = CategoricalDNN(**conf["model"])
 
-    # add the variance computed in the dataset to the model
-
-    # m.training_var = train_dataset.training_var
-
     # have to send the module to the correct device first
 
     m.to(device)
@@ -279,14 +324,13 @@ def main(rank, world_size, conf, trial=False):
     model, optimizer, scheduler, scaler = load_model_states_and_optimizer(conf, model, device)
 
     # Train and validation losses
-    # train_criterion = EvidentialRegressionLoss(coef=10.84134458514458)
-    # valid_criterion = EvidentialRegressionLoss(coef=10.84134458514458)
 
-    # train_criterion = LipschitzMSELoss(**conf["train_loss"])
-    # valid_criterion = LipschitzMSELoss(**conf["valid_loss"])
-
-    train_criterion = edl_digamma_loss
-    valid_criterion = edl_digamma_loss
+    if uncertainty:
+        train_criterion = EDLDigammaLoss(num_classes, kl_loss_coefficient)
+        valid_criterion = EDLDigammaLoss(num_classes, kl_loss_coefficient)
+    else:
+        train_criterion = torch.nn.CrossEntropyLoss()
+        valid_criterion = torch.nn.CrossEntropyLoss()
 
     # Initialize a trainer object
 
@@ -298,7 +342,7 @@ def main(rank, world_size, conf, trial=False):
     )
 
     # Fit the model
-    classifier_metrics = {}
+    classifier_metrics = MetricsCalculator(use_uncertainty=uncertainty)
 
     result = trainer.fit(
         conf,
@@ -310,7 +354,6 @@ def main(rank, world_size, conf, trial=False):
         scaler,
         scheduler,
         classifier_metrics,
-        transform=None,
         trial=trial
     )
 

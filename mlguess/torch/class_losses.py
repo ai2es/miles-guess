@@ -261,3 +261,46 @@ def edl_digamma_loss(
         )
     )
     return loss
+
+
+class EDLLoss(torch.nn.Module):
+    def __init__(self, func, num_classes, annealing_step, weights=None):
+        super(EDLLoss, self).__init__()
+        self.func = func
+        self.num_classes = num_classes
+        self.annealing_step = annealing_step
+        self.weights = weights
+
+    def forward(self, y, alpha, epoch_num, device=None):
+        if device is None:
+            device = y.device
+        y = y.to(device)
+        alpha = alpha.to(device)
+        S = torch.sum(alpha, dim=1, keepdim=True)
+        if self.weights is None:
+            A = torch.sum(y * (self.func(S) - self.func(alpha)), dim=1, keepdim=True)
+        else:
+            weights = self.weights.to(device)
+            A = torch.sum(weights * y * (self.func(S) - self.func(alpha)), dim=1, keepdim=True)
+
+        annealing_coef = min(1.0, epoch_num / self.annealing_step)
+        kl_alpha = (alpha - 1) * (1 - y) + 1
+        kl_div = annealing_coef * kl_divergence(kl_alpha, self.num_classes, device=device)
+        return A + kl_div
+
+
+class EDLDigammaLoss(torch.nn.Module):
+    def __init__(self, num_classes, annealing_step, weights=None):
+        super(EDLDigammaLoss, self).__init__()
+        self.num_classes = num_classes
+        self.annealing_step = annealing_step
+        self.weights = weights
+
+    def forward(self, output, target, epoch_num, device=None):
+        if device is None:
+            device = output.device
+        evidence = F.relu(output)  # Apply ReLU to output
+        alpha = evidence + 1
+        edl_loss_fn = EDLLoss(torch.digamma, self.num_classes, self.annealing_step, self.weights)
+        loss = torch.mean(edl_loss_fn(target, alpha, epoch_num, device))
+        return loss

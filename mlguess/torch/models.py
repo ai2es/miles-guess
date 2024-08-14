@@ -128,6 +128,7 @@ class DNN(nn.Module):
                  dr=[0.5],
                  batch_norm=True,
                  lng=False,
+                 softmax=False,
                  weight_init=False,
                  num_layers=None):
 
@@ -149,12 +150,16 @@ class DNN(nn.Module):
             if lng:
                 blocks.append(LinearNormalGamma(layer_size[-1], output_size))
             else:
-                blocks.append(SpectralNorm(nn.Linear(layer_size[-1], output_size)))
+                blocks.append(nn.Linear(layer_size[-1], output_size))
+                if softmax:
+                    blocks.append(nn.Softmax(dim=-1))
         else:
             if lng:
                 blocks = [LinearNormalGamma(input_size, output_size)]
             else:
-                blocks = [SpectralNorm(nn.Linear(input_size, output_size))]
+                blocks = [nn.Linear(input_size, output_size)]
+                if softmax:
+                    blocks.append(nn.Softmax(dim=-1))
 
         self.fcn = nn.Sequential(*blocks)
         if weight_init:
