@@ -41,21 +41,62 @@ def load_scheduler(optimizer, conf):
 
 # Define a half-cosine decay learning rate schedule for the second phase
 def lr_lambda_phase2(step, total_updates_phase2=299000):
+    """
+    This function implements a half-cosine decay learning rate schedule
+    specifically for the second training phase.
+
+    Args:
+        step (int): The current training step within the second phase.
+        total_updates_phase2 (int, optional): The total number of updates
+                                               in the second phase (default: 299000).
+
+    Returns:
+        torch.Tensor: The learning rate factor for the current step based on
+                      the half-cosine decay schedule.
+    """
     step_tensor = torch.tensor(step, dtype=torch.float32)
     return 0.5 * (1 + torch.cos((step_tensor / total_updates_phase2) * 3.1415))
 
 
 # Combine the learning rate schedules
 def phased_lr_lambda(step, total_updates_phase1=1000, total_updates_phase2=299000):
+    """
+    This function combines two learning rate schedules for a phased training
+    process.
+
+    Args:
+        step (int): The current training step.
+        total_updates_phase1 (int, optional): The total number of updates
+                                                in the first phase (default: 1000).
+        total_updates_phase2 (int, optional): The total number of updates
+                                                in the second phase (default: 299000).
+
+    Returns:
+        torch.Tensor: The learning rate factor for the current step based on
+                      which phase it belongs to and the corresponding schedule.
+    """
     if step < total_updates_phase1:
         return lr_lambda_phase1(step, total_updates_phase1=total_updates_phase1)
     else:
         return lr_lambda_phase2(step - total_updates_phase1, total_updates_phase2=total_updates_phase2)
 
 
-# https://arxiv.org/pdf/2312.03876.pdf
 def lr_lambda_phase1(epoch, num_epochs=100, warmup_epochs=10):
+    """
+    This function implements a learning rate schedule based on the reference
+    paper (https://arxiv.org/pdf/2312.03876.pdf) for the first training phase.
 
+    Args:
+        epoch (int): The current training epoch.
+        num_epochs (int, optional): The total number of epochs in the training
+                                     process (default: 100).
+        warmup_epochs (int, optional): The number of epochs for the warmup
+                                         phase (default: 10).
+
+    Returns:
+        float: The learning rate factor for the current epoch based on
+               the specified learning rate schedule.
+    """
     total_epochs = num_epochs - warmup_epochs
 
     if epoch < warmup_epochs:
@@ -173,7 +214,6 @@ def annealed_probability(epoch, max_epochs=100, min_probability=0.01, max_probab
     termination_probability = min(termination_probability, max_probability)
 
     return termination_probability
-
 
 
 if __name__ == "__main__":

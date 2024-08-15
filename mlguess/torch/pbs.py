@@ -6,6 +6,14 @@ import subprocess
 
 
 def launch_script(config_file, script_path, launch=True):
+    """
+    This function launches a script using PBS (Portable Batch System) based on configurations in a YAML file.
+
+    Args:
+        config_file (str): Path to the YAML configuration file.
+        script_path (str): Path to the Python script to be launched.
+        launch (bool, optional): Whether to submit the job to PBS (default: True).
+    """
 
     # Load the configuration file
     with open(config_file, 'r') as file:
@@ -56,6 +64,14 @@ def launch_script(config_file, script_path, launch=True):
 
 
 def launch_script_mpi(config_file, script_path, launch=True):
+    """
+    This function launches a script using PBS with MPI (Message Passing Interface) for distributed training on multiple GPUs.
+
+    Args:
+        config_file (str): Path to the YAML configuration file.
+        script_path (str): Path to the Python script to be launched with MPI.
+        launch (bool, optional): Whether to submit the job to PBS (default: True).
+    """
 
     with open(config_file) as cf:
         config = yaml.load(cf, Loader=yaml.FullLoader)
