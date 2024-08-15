@@ -1,69 +1,6 @@
-# MILES-Guess
-Generalized Uncertainty for Earth System Science (GUESS)
+Welcome to the Keras users page. The instructions below outline how to compute various UQ quantities like aleatoric and epistemic using different modeling approaches.
 
-Developed by the Machine Ingetration and Learning for Earth Systems (MILES) group at the NSF National Center for Atmospheric Research (NCAR), Boulder CO, USA
 
-## Contributors 
-* John Schreck
-* David John Gagne
-* Charlie Becker
-* Gabrielle Gantos
-* Dhamma Kimpara
-* Thomas Martin
-
-## Documentation
-Full documentation is [here](https://miles-guess.readthedocs.io/en/latest/).
-
-## Quick Setup
-
-Install in your Python environment with the following command:
-```bash
-pip install miles-guess
-```
-If you want to install a particular backend (tensorflow, tensorflow_gpu, torch, jax): 
-```bash
-pip install miles-guess[<backend>]
-```
-## Setup from Scratch
-
-Install the Miniconda Python installer available
-[here](https://docs.conda.io/en/latest/miniconda.html).
-
-First clone the miles-guess repo from github.
-```bash
-git clone https://github.com/ai2es/miles-guess.git`
-cd miles-guess
-```
-
-Create a conda environment for non-Casper/Derecho users:
-```bash
-mamba env create -f environment.yml`
-conda activate guess`
-```
-
-Create a conda environment for Casper/Derecho users including Tensorflow 2.15 with GPU support.
-```bash
-mamba env create -f environment_gpu.yml`
-conda activate guess
-```
-
-## Using miles-guess
-
-The package contains three scripts for training three regression models, and one for training categorical models. 
-The regression examples are trained on our surface layer ("SL") dataset for predicting latent heat and other quantities, 
-and the categorical example is trained on a precipitation dataset ("p-type").
-
-The law of total variance for each model prediction target may be computed as 
-
-$$LoTV = E[\sigma^2] + Var[\mu]$$ 
-
-which is the sum of aleatoric and epistemic contributions, respectively. 
-
-For detailed information about computing the LoTV using training with Keras, refer to [the Keras training details README](mlguess/keras/keras.md).
-
-For pyTorch, please visit the [the pyTorch training details README](mlguess/torch/torch.md).
-
-<!--
 ### 1a. Train/evaluate a deterministic multi-layer perceptrion (MLP) on the SL dataset:
 ```bash
 python3 applications/train_mlp_SL.py -c config/model_mlp_SL.yml
@@ -71,7 +8,6 @@ python3 applications/train_mlp_SL.py -c config/model_mlp_SL.yml
 
 ### 1b. Train/evaluate a parametric "Gaussian" MLP on the SL dataset:
 ```bash
-
 python applications/train_gaussian_SL.py -c config/model_gaussian_SL.yml
 ```
 
@@ -277,4 +213,4 @@ Depending on the problem, a data field is customized and also present in the con
 
 ## ECHO hyperparameter optimization 
 
-Configuration files are also supplied for use with the Earth Computing Hyperparameter Optimization (ECHO) package. See the echo package https://github.com/NCAR/echo-opt/tree/main/echo for more details on the configuration fields. -->
+Configuration files are also supplied for use with the Earth Computing Hyperparameter Optimization (ECHO) package. See the echo package https://github.com/NCAR/echo-opt/tree/main/echo for more details on the configuration fields.
