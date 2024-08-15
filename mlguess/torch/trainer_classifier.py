@@ -344,7 +344,7 @@ class Trainer:
         distributed = True if conf["trainer"]["mode"] in ["fsdp", "ddp"] else False
 
         results_dict = defaultdict(list)
-        mu_list, ale_list, epi_list, y_list = [], [], [], []
+        mu_list, u_list, ale_list, epi_list, y_list = [], [], [], [], []
 
         batch_group_generator = tqdm.tqdm(
             enumerate(test_loader),
@@ -363,7 +363,7 @@ class Trainer:
 
                 if self.uncertainty:
                     loss = criterion(y_pred, y_true_one_hot, 0, self.device)
-                    y_pred, ale, epi, total = self.model.calc_uncertainty(y_pred)
+                    y_pred, u, ale, epi = self.model.calc_uncertainty(y_pred)
                 else:
                     loss = criterion(y_pred, y)
 
@@ -372,6 +372,7 @@ class Trainer:
 
                 # Accumulate results
                 mu_list.append(y_pred.cpu())
+                u_list.append(u.cpu())
                 ale_list.append(ale.cpu())
                 epi_list.append(epi.cpu())
                 y_list.append(y.cpu())
@@ -388,6 +389,7 @@ class Trainer:
 
         # Concatenate arrays
         mu = np.concatenate(mu_list, axis=0)
+        u = np.concatenate(u_list, axis=0)
         ale = np.concatenate(ale_list, axis=0)
         epi = np.concatenate(epi_list, axis=0)
         total = ale + epi
@@ -416,6 +418,7 @@ class Trainer:
         return {
             'metrics': results_dict,
             'mu': mu,
+            'dempster-shafer': u,
             'aleatoric': ale,
             'epistemic': epi,
             'total': total

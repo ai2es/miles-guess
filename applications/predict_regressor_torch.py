@@ -19,7 +19,7 @@ from torch.utils.data.distributed import DistributedSampler
 from mlguess.torch.distributed import distributed_model_wrapper
 from mlguess.torch.pbs import launch_script, launch_script_mpi
 from mlguess.torch.checkpoint import load_model_state
-from mlguess.torch.trainer import Trainer
+from mlguess.torch.trainer_regression import Trainer
 from mlguess.torch.regression_losses import LipschitzMSELoss
 from mlguess.torch.models import seed_everything, DNN
 from mlguess.regression_metrics import regression_metrics

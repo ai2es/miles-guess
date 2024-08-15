@@ -9,10 +9,12 @@ import shutil
 import logging
 import importlib
 import numpy as np
+import pandas as pd
 
 from pathlib import Path
 from argparse import ArgumentParser
 from echo.src.base_objective import BaseObjective
+from collections import defaultdict
 
 import torch
 import torch.distributed as dist
@@ -83,7 +85,7 @@ def import_class_from_path(class_name, file_path):
     return getattr(module, class_name)
 
 
-def load_dataset_and_sampler(conf, world_size, rank, is_train, seed=42):
+def load_dataset_and_sampler(conf, world_size, rank, split, seed=42, return_df=False):
     """
     Load a dataset and its corresponding distributed sampler based on the configuration.
 
@@ -109,11 +111,13 @@ def load_dataset_and_sampler(conf, world_size, rank, is_train, seed=42):
     for features in ["TEMP_C", "T_DEWPOINT_C", "UGRD_m/s", "VGRD_m/s"]:
         input_features += conf["data"][features]
     output_features = conf["data"]["ptypes"]
+    is_train = split == "train"
 
     # Load data
     _conf = copy.deepcopy(conf)
     _conf.update(conf["data"])
     data = load_ptype_uq(_conf, data_split=0, verbose=1, drop_mixed=False)
+
     # check if we should scale the input data by groups
     scale_groups = [] if "scale_groups" not in conf["data"] else conf["data"]["scale_groups"]
     groups = [list(conf["data"][g]) for g in scale_groups]
@@ -133,15 +137,11 @@ def load_dataset_and_sampler(conf, world_size, rank, is_train, seed=42):
         groups=[],
     )
 
-    if is_train:
-        X_train = torch.FloatTensor(scaled_data["train_x"].values)
-        y_train = torch.LongTensor(np.argmax(scaled_data["train_y"], axis=-1))
-    else:
-        X_train = torch.FloatTensor(scaled_data["val_x"].values)
-        y_train = torch.LongTensor(np.argmax(scaled_data["val_y"], axis=-1))
+    X = torch.FloatTensor(scaled_data[f"{split}_x"].values)
+    y = torch.LongTensor(np.argmax(scaled_data[f"{split}_y"], axis=-1))
 
     # Create dataset and dataloader
-    dataset = TensorDataset(X_train, y_train)
+    dataset = TensorDataset(X, y)
 
     # Pytorch sampler
     sampler = DistributedSampler(
@@ -152,8 +152,10 @@ def load_dataset_and_sampler(conf, world_size, rank, is_train, seed=42):
         shuffle=is_train,
         drop_last=(not is_train)
     )
-    flag = 'training' if is_train else 'validation'
-    logging.info(f"Loaded a {flag} torch dataset, and a distributed sampler")
+    logging.info(f"Loaded a {split} torch dataset, and a distributed sampler")
+
+    if return_df:
+        return dataset, sampler, data
 
     return dataset, sampler
 
@@ -281,8 +283,9 @@ def main(rank, world_size, conf, trial=False):
 
     # load dataset and sampler
 
-    train_dataset, train_sampler = load_dataset_and_sampler(conf, world_size, rank, is_train=True)
-    valid_dataset, valid_sampler = load_dataset_and_sampler(conf, world_size, rank, is_train=False)
+    train_dataset, train_sampler, data = load_dataset_and_sampler(conf, world_size, rank, split="train", return_df=True)
+    valid_dataset, valid_sampler = load_dataset_and_sampler(conf, world_size, rank, split="val")
+    test_dataset, test_sampler = load_dataset_and_sampler(conf, world_size, rank, split="test")
 
     # setup the dataloder for this process
 
@@ -302,6 +305,16 @@ def main(rank, world_size, conf, trial=False):
         batch_size=valid_batch_size,
         shuffle=False,
         sampler=valid_sampler,
+        pin_memory=True,
+        num_workers=valid_thread_workers,
+        drop_last=False
+    )
+
+    test_loader = torch.utils.data.DataLoader(
+        test_dataset,
+        batch_size=valid_batch_size,
+        shuffle=False,
+        sampler=test_sampler,
         pin_memory=True,
         num_workers=valid_thread_workers,
         drop_last=False
@@ -356,6 +369,62 @@ def main(rank, world_size, conf, trial=False):
         classifier_metrics,
         trial=trial
     )
+
+    # Predict with the model
+    logging.info("Predicting on the data splits with the trained model. This may take some time")
+
+    # train loader needs reinitialized so we do not drop last batch
+    # valid and test we did not do that since doesnt affect gradient
+    train_loader = torch.utils.data.DataLoader(
+        train_dataset,
+        batch_size=train_batch_size,
+        shuffle=False,  # sampler handles shuffling
+        sampler=train_sampler,
+        pin_memory=True,
+        persistent_workers=True if thread_workers > 0 else False,
+        num_workers=thread_workers,
+        drop_last=False
+    )
+
+    splits = ["train", "val", "test"]
+    loaders = [train_loader, valid_loader, test_loader]
+    all_results = defaultdict(dict)
+
+    for split, dataloader in zip(splits, loaders):
+
+        result = trainer.predict(
+            conf,
+            dataloader,
+            valid_criterion,
+            classifier_metrics,
+            split
+        )
+
+        metrics = result["metrics"]
+        mu = result["mu"]
+        u = result["dempster-shafer"]
+        aleatoric = result["aleatoric"]
+        epistemic = result["epistemic"]
+        total = result["total"]
+
+        # Add predictions back to the DataFrame
+        df = data[split].copy()
+
+        df["u"] = u
+        df[[f"y_pred_prob_{label}" for label in range(num_classes)]] = mu
+        df[[f"aleatorc_{label}" for label in range(num_classes)]] = aleatoric
+        df[[f"epistemic_{label}" for label in range(num_classes)]] = epistemic
+        df[[f"total_{label}" for label in range(num_classes)]] = total
+
+        for key, values in metrics.items():
+            if isinstance(values, list):
+                values = values[0]
+            all_results[key][split] = values
+
+        df.to_csv(os.path.join(conf['save_loc'], f"{split}.csv"))
+
+    mets = pd.DataFrame.from_dict(all_results, orient='index')
+    mets.to_csv(os.path.join(conf['save_loc'], "metrics.csv"))
 
     return result
 

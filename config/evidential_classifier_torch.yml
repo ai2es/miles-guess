@@ -155,16 +155,18 @@ ensemble:
   n_splits: 10
 
 # Training configuration
-batch_size: &batch_size 128
+batch_size: &batch_size 9411
 trainer:
   mode: none  # none, ddp, fsdp
   training_metric: "valid_loss"
   train_batch_size: *batch_size
   valid_batch_size: *batch_size
-  batches_per_epoch: 500  # Set to 0 to use len(dataloader)
+  kl_loss_coefficient: 10
+  uncertainty: True
+  batches_per_epoch: 0  # Set to 0 to use len(dataloader)
   valid_batches_per_epoch: 0
-  learning_rate: 0.0015285262808755972
-  weight_decay: 0.0009378550509012784
+  learning_rate: 0.001
+  weight_decay: 0.0
   start_epoch: 0
   epochs: 100
   amp: False
@@ -191,10 +193,10 @@ trainer:
 model:
   input_size: 84
   output_size: 4
-  layer_size: [1057, 1057, 1057, 1057, 1057]  # Example block sizes
-  dr: [0.263, 0.263, 0.263, 0.263, 0.263]  # Dropout rates
+  layer_size: [212, 212, 212, 212]  # Example block sizes
+  dr: [0.1167, 0.1167, 0.1167, 0.1167]  # Dropout rates
   batch_norm: False  # Whether to use batch normalization
-  lng: True  # Use the evidential layer (True) or not (False)
+  softmax: False
 
 # Launch commapnds
 pbs:

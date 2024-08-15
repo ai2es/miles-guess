@@ -25,7 +25,7 @@ from mlguess.torch.checkpoint import (
     FSDPOptimizerWrapper,
     TorchFSDPCheckpointIO
 )
-from mlguess.torch.trainer import Trainer
+from mlguess.torch.trainer_regression import Trainer
 from mlguess.torch.regression_losses import LipschitzMSELoss
 from mlguess.torch.models import seed_everything, DNN
 from mlguess.regression_metrics import regression_metrics
