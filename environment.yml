@@ -27,6 +27,7 @@ dependencies:
   - pip:
     - tensorflow
     - keras
+    - torch
     - echo-opt
     - hagelslag
     - bridgescaler

@@ -53,7 +53,7 @@ The package contains three scripts for training three regression models, and one
 The regression examples are trained on our surface layer ("SL") dataset for predicting latent heat and other quantities, 
 and the categorical example is trained on a precipitation dataset ("p-type").
 
-The law of total variance for each model prediction target may be computed as 
+The law of total variance for each model prediction target may be computed as
 
 $$LoTV = E[\sigma^2] + Var[\mu]$$ 
 
