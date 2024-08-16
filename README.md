@@ -49,19 +49,16 @@ conda activate guess
 
 ## Using miles-guess
 
-The package contains three scripts for training three regression models, and one for training categorical models. 
-The regression examples are trained on our surface layer ("SL") dataset for predicting latent heat and other quantities, 
-and the categorical example is trained on a precipitation dataset ("p-type").
-
 The law of total variance for each model prediction target may be computed as
 
 $$LoTV = E[\sigma^2] + Var[\mu]$$ 
 
-which is the sum of aleatoric and epistemic contributions, respectively. 
+which is the sum of aleatoric and epistemic contributions, respectively. The MILES-GUESS package contains options for using either Keras or PyTorch for computing quantites according to the LoTV as well as utilizing Dempster-Shafer theory uncertainty in the classifier case. 
 
-For detailed information about computing the LoTV using training with Keras, refer to [the Keras training details README](mlguess/keras/keras.md).
+For detailed information about training with Keras, refer to [the Keras training details README](docs/source/keras.md). There three scripts for training three regression models, and one for training categorical models. The regression examples are trained on our surface layer ("SL") dataset for predicting latent heat and other quantities, 
+and the categorical example is trained on a precipitation dataset ("p-type").
 
-For pyTorch, please visit the [the pyTorch training details README](mlguess/torch/torch.md).
+For pyTorch, please visit the [the pyTorch training details README](docs/source/torch.md). There is one training script that works for both evidential and standard classification tasks. Torch examples use the same datasets as the Keras models. The torch code can be used with DDP and FSDP.
 
 <!--
 ### 1a. Train/evaluate a deterministic multi-layer perceptrion (MLP) on the SL dataset:
