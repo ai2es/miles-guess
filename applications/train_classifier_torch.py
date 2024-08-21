@@ -3,7 +3,6 @@ import os
 import sys
 import copy
 import yaml
-import wandb
 import optuna
 import shutil
 import logging
@@ -24,7 +23,7 @@ from torch.distributed.fsdp.sharded_grad_scaler import ShardedGradScaler
 
 from mlguess.torch.distributed import distributed_model_wrapper
 from mlguess.torch.scheduler import load_scheduler
-from mlguess.torch.pbs import launch_script, launch_script_mpi
+from mlguess.pbs import launch_pbs_jobs, launch_distributed_jobs
 from mlguess.torch.checkpoint import (
     FSDPOptimizerWrapper,
     TorchFSDPCheckpointIO
@@ -41,9 +40,6 @@ warnings.filterwarnings("ignore")
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 os.environ["OMP_NUM_THREADS"] = "1"
 os.environ["MKL_NUM_THREADS"] = "1"
-
-os.environ['NCCL_SHM_DISABLE'] = '1'
-os.environ['NCCL_IB_DISABLE'] = '1'
 
 
 # https://stackoverflow.com/questions/59129812/how-to-avoid-cuda-out-of-memory-in-pytorch
@@ -507,14 +503,6 @@ if __name__ == "__main__":
         help="Submit workers to PBS.",
     )
     parser.add_argument(
-        "-w",
-        "--wandb",
-        dest="wandb",
-        type=int,
-        default=0,
-        help="Use wandb. Default = False"
-    )
-    parser.add_argument(
         "-m",
         "--mode",
         type=str,
@@ -525,7 +513,6 @@ if __name__ == "__main__":
     args_dict = vars(args)
     config = args_dict.pop("model_config")
     launch = int(args_dict.pop("launch"))
-    use_wandb = int(args_dict.pop("wandb"))
     mode = str(args_dict.pop("mode"))
 
     # Set up logger to print stuff
@@ -561,20 +548,11 @@ if __name__ == "__main__":
         script_path = Path(__file__).absolute()
         if conf['pbs']['queue'] == 'casper':
             logging.info("Launching to PBS on Casper")
-            launch_script(config, script_path)
+            launch_pbs_jobs(config, script_path)
         else:
             logging.info("Launching to PBS on Derecho")
-            launch_script_mpi(config, script_path)
+            launch_distributed_jobs(config, script_path)
         sys.exit()
-
-    if use_wandb:  # this needs updated
-        wandb.init(
-            # set the wandb project where this run will be logged
-            project="Derecho parallelism",
-            name=f"Worker {os.environ['RANK']} {os.environ['WORLD_SIZE']}",
-            # track hyperparameters and run metadata
-            config=conf
-        )
 
     seed = 1000 if "seed" not in conf else conf["seed"]
     seed_everything(seed)

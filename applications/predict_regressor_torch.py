@@ -17,7 +17,7 @@ import torch.distributed as dist
 from torch.utils.data.distributed import DistributedSampler
 
 from mlguess.torch.distributed import distributed_model_wrapper
-from mlguess.torch.pbs import launch_script, launch_script_mpi
+from mlguess.pbs import launch_pbs_jobs, launch_distributed_jobs
 from mlguess.torch.checkpoint import load_model_state
 from mlguess.torch.trainer_regression import Trainer
 from mlguess.torch.regression_losses import LipschitzMSELoss
@@ -29,10 +29,6 @@ warnings.filterwarnings("ignore")
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 os.environ["OMP_NUM_THREADS"] = "1"
 os.environ["MKL_NUM_THREADS"] = "1"
-
-os.environ['NCCL_SHM_DISABLE'] = '1'
-os.environ['NCCL_IB_DISABLE'] = '1'
-
 
 # https://stackoverflow.com/questions/59129812/how-to-avoid-cuda-out-of-memory-in-pytorch
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
@@ -226,7 +222,7 @@ def main(rank, world_size, conf, trial=False):
         elif split == "valid":
             df = valid_loader.dataset.valid_data
         elif split == "test":
-            df = train_loader.dataset.test_data
+            df = test_loader.dataset.test_data
 
         df["mu"] = mu
         df["aleatoric"] = aleatoric
@@ -320,10 +316,10 @@ if __name__ == "__main__":
         script_path = Path(__file__).absolute()
         if conf['pbs']['queue'] == 'casper':
             logging.info("Launching to PBS on Casper")
-            launch_script(config, script_path)
+            launch_pbs_jobs(config, script_path)
         else:
             logging.info("Launching to PBS on Derecho")
-            launch_script_mpi(config, script_path)
+            launch_distributed_jobs(config, script_path)
         sys.exit()
 
     if use_wandb:  # this needs updated

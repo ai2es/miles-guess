@@ -2,7 +2,7 @@ Welcome to the pyTorch users page. The instructions below outline how to compute
 
 ## Regression usage
 
-There are two provided scripts which are mostly similar, one for training and one for loading a trained model and predicting. 
+There are two provided scripts which are mostly similar, one for training (and predicting), and one for loading a trained model and predicting. The second script serves as an example on how to load the model from a checkpoint as well as potentially scale inference across GPUs. You may only need to run the trainer script and not necessarily the predict script, as they will both save model predictions to file as well as metrics.
 
 Run the training script with: `python applications/train_regressor_torch.py -c <path-to-config-file> [-l] [-m <mode>]`
 
@@ -12,13 +12,20 @@ Arguments:
 - `-m, --mode`: Set the training mode to 'none', 'ddp', or 'fsdp' (optional)
 
 Example: 
-`python trainer.py -c config.yml -m ddp -l 1`
+`python trainer.py -c config.yml -m none -l 1`
 
-The YAML configuration file should contain settings for the model, training, data, and pbs or slurm settings. For distributed training, set the `mode` in the config file or use the `-m` argument to specify 'ddp' or 'fsdp', and use the `-l` flag to submit jobs to PBS or manually set up your distributed environment.
+Running distribued mode:
+
+`torchrun [options] trainer.py -c config.yml -m ddp`
+
+`torchrun [options] trainer.py -c config.yml -m fsdp`
+
+The YAML configuration file should contain settings for the model, training, data, and pbs or slurm settings. For distributed training, set the `mode` in the config file or use the `-m` argument to specify 'ddp' or 'fsdp'. Use the `-l` flag to submit jobs to PBS or manually set up your distributed environment. If you plan to use more than 1 node, you may need to customize the torchrun for your system. FSDP is relatively hard to set up automatically, you will need to choose the model/data sharding policy on your own.
 
 For more detailed information about configuration options and advanced usage, please refer to the code documentation and comments within the script.
 
-Once a model is trained, then run
+[Optional]
+Once a model is trained, if you would like to load the model after-the-fact and predict on the training splits, run
 
 `python applications/predict_regressor_torch.py -c <path-to-config-file> [-l] [-m <mode>]`
 
@@ -26,12 +33,15 @@ which will load the trained model from disk and predict on the training splits a
 
 ## Classifier usage
 
-For the classifier models, training and evaluating an evidential model on a dataset is performed in the same script, with options for distributed training using either DDP or FSDP.
+For the classifier models, training and evaluating an evidential model on a dataset is performed in the same script, with options for distributed training using either DDP or FSDP. See the regression prediction script for an example on model checkpoint reloading and prediction.
 
-Run the combined script with: `python applications/train_classifier_torch.py -c <path-to-config-file> [-l] [-m <mode>]`
+Run the combined script with: 
+
+`python applications/train_classifier_torch.py -c <path-to-config-file> [-l] [-m <mode>]`
 
 Example: 
-`python applications/train_classifier_torch.py -c config.yml -m ddp -l 1`
+
+`python applications/train_classifier_torch.py -c config.yml -m none`
 
 As noted this script will doubly train a model and then predict on the supplied training splits. The predicted quanties include the task(s) predictions along with the Dempster-Shafer uncertainty, and aleatoric and epistemic quantities for a $K$-class problem. Please see the full documentation for more. 
 

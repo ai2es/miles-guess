@@ -1,4 +1,4 @@
-save_loc: "/glade/work/$USER/repos/miles-guess/miles-guess/results/"
+save_loc: "/glade/work/$USER/repos/miles-guess/miles-guess/testing/regression/"
 seed: 1000
 
 data:
@@ -29,7 +29,7 @@ data:
       with_mean: true
       with_std: true
     type: normalize
-  batch_size: &batch_size 9163 # Example batch size
+  batch_size: &batch_size 5470 # Example batch size
   data_path: '/glade/p/cisl/aiml/ai2es/surfacelayer/cabauw_derived_data_20210720.csv'
 
 trainer:
@@ -39,10 +39,10 @@ trainer:
     valid_batch_size: *batch_size
     batches_per_epoch: 500 # Set to 0 to use len(dataloader)
     valid_batches_per_epoch: 0
-    learning_rate: 0.0015285262808755972
-    weight_decay: 0.0009378550509012784
+    learning_rate: 0.0061048983425573185
+    weight_decay: 3.5931998006241314e-07
     start_epoch: 0
-    epochs: 100
+    epochs: 1
     amp: False
     grad_accum_every: 1
     grad_max_norm: 1.0
@@ -67,34 +67,34 @@ model:
 
 train_loss:
   tol: 1e-8  # Tolerance parameter for loss calculations
-  coef: 0.1  # Factor for the evidence regularizer
+  coef: 5.806527626063491  # Factor for the evidence regularizer
   reduction: "mean"  # Reduction method for the loss calculation
 
 valid_loss:
   tol: 1e-8  # Tolerance parameter for loss calculations
-  coef: 0.1  # Factor for the evidence regularizer
+  coef: 5.806527626063491  # Factor for the evidence regularizer
   reduction: "mean"  # Reduction method for the loss calculation
 
-pbs: #derecho
-    conda: "holodec"
-    project: "NAML0001"
-    job_name: "xformer"
-    walltime: "24:00:00"
-    nodes: 8
-    ncpus: 64
-    ngpus: 4
-    mem: '480GB'
-    queue: 'preempt'
+# pbs: #derecho
+#     conda: "holodec"
+#     project: "NAML0001"
+#     job_name: "xformer"
+#     walltime: "24:00:00"
+#     nodes: 8
+#     ncpus: 64
+#     ngpus: 4
+#     mem: '480GB'
+#     queue: 'preempt'
     
-# pbs: # casper
-#     conda: "/glade/work/schreck/miniconda3/envs/evidential"
-#     job_name: 'latlon'
-#     nodes: 1
-#     ncpus: 8
-#     ngpus: 1
-#     mem: '128GB'
-#     walltime: '12:00:00'
-#     gpu_type: 'a100'
-#     cpu_type: 'milan'
-#     project: 'NAML0001'
-#     queue: 'casper'
+pbs: # casper
+    conda: "/glade/work/schreck/miniconda3/envs/evidential"
+    job_name: 'latlon'
+    nodes: 1
+    ncpus: 8
+    ngpus: 1
+    mem: '128GB'
+    walltime: '12:00:00'
+    gpu_type: 'a100'
+    cpu_type: 'milan'
+    project: 'NAML0001'
+    queue: 'casper'

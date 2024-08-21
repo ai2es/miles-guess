@@ -1,6 +1,6 @@
 
 # Where to save stuff
-save_loc: '/glade/work/schreck/repos/miles-guess/miles-guess/results/torch_classifier'
+save_loc: '/glade/work/schreck/repos/miles-guess/miles-guess/testing/classifier'
 
 # Random state
 seed: 1000
