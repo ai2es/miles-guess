@@ -58,7 +58,7 @@ which is the sum of aleatoric and epistemic contributions, respectively. The MIL
 For detailed information about training with Keras, refer to [the Keras training details README](docs/source/keras.md). There three scripts for training three regression models, and one for training categorical models. The regression examples are trained on our surface layer ("SL") dataset for predicting latent heat and other quantities, 
 and the categorical example is trained on a precipitation dataset ("p-type").
 
-For pyTorch, please visit the [the pyTorch training details README](docs/source/torch.md). There is one training script that works for both evidential and standard classification tasks. Torch examples use the same datasets as the Keras models. The torch code can be used with DDP and FSDP.
+For pyTorch, please visit the [the pyTorch training details README](docs/source/torch.md) where details on training scripts for both evidential standard classification tasks are detailed. Torch examples use the same datasets as the Keras models. The torch training code will also scale on GPUs, and is compatitible with DDP and FSDP.
 
 <!--
 ### 1a. Train/evaluate a deterministic multi-layer perceptrion (MLP) on the SL dataset:
