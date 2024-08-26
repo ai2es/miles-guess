@@ -95,6 +95,7 @@ def evidential_reg_loss(evi_coef):
 
     return loss
 
+@keras.saving.register_keras_serializable()
 def gaussian_nll(y, y_pred, reduce=True):
     """
     Loss function for a parametric Gaussian Loss.
