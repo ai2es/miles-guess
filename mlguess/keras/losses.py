@@ -4,13 +4,22 @@ import keras.ops as ops
 
 backend = keras.backend.backend()
 if backend == "tensorflow":
-    from tensorflow.math import digamma, lgamma
+    try:
+        from tensorflow.math import digamma, lgamma
+    except ImportError:
+        print("Tensorflow not available")
 elif backend == "jax":
-    from jax.scipy.special import digamma
-    from jax.lax import lgamma
+    try:
+        from jax.scipy.special import digamma
+        from jax.lax import lgamma
+    except ImportError:
+        print("jax not available")
 elif backend == "torch":
-    from torch.special import digamma
-    from torch import lgamma
+    try:
+        from torch.special import digamma
+        from torch import lgamma
+    except ImportError:
+        print("pytorch not available")
 
 @keras.saving.register_keras_serializable()
 def evidential_cat_loss(evi_coef, epoch_callback, class_weights=None):
