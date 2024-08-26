@@ -13,8 +13,7 @@ from keras.optimizers import Adam, SGD
 
 @keras.saving.register_keras_serializable()
 class CategoricalDNN(keras.models.Model):
-    """
-    A Categorical Dense Neural Network Model that can support arbitrary numbers of hidden layers
+    """A Categorical Dense Neural Network Model that can support arbitrary numbers of hidden layers
     and the ability to provide evidential uncertainty estimation.
 
     Attributes:
@@ -42,8 +41,7 @@ class CategoricalDNN(keras.models.Model):
         verbose: Level of detail to provide during training (0 = None, 1 = Minimal, 2 = All)
         classifier: (boolean) If training on classes
 
-        Example:
-
+    Example:
             When evidential==True, the output activation and the loss function will be overridden under the hood. When
             evidential==False, it will use the parameters specified and ignore the annealing_coeff.
             Note: Model compilation happens under the hood when .fit() is called.
@@ -196,12 +194,12 @@ class CategoricalDNN(keras.models.Model):
         return hist
 
     def predict(self, x, return_uncertainties=True, **kwargs):
-        """
-        Args:
+        """Args:
             x: Input data
             batch_size: Size of batch to predict
             return_uncertainties: Returns derived uncertainties from evidential distribution parameters.
                                   If False, return the probabilities only.
+
         Returns:
             If return_uncertainties is True (tuple): (probs, u (evidential uncertainty), aleatoric, epistemic)
             Else If return_uncertainties is False: probs
@@ -262,8 +260,7 @@ class CategoricalDNN(keras.models.Model):
 
 
 class RegressorDNN(keras.models.Model):
-    """
-    A Dense Neural Network Model that can support arbitrary numbers of hidden layers
+    """A Dense Neural Network Model that can support arbitrary numbers of hidden layers
     and the ability to provide evidential uncertainty estimation or uncertainty estimation through
     a gaussian parametric approach.
 
@@ -285,8 +282,7 @@ class RegressorDNN(keras.models.Model):
         evi_coeff: Evidential regularization coefficient.
         metrics: Optional list of metrics to monitor during training.
 
-        Example:
-
+    Example:
             When evidential==True or uncertainty==True, the output activation and the loss function will be overridden
             under the hood. If both are True, the evidential model will override. When both are set to False,
             it will train a generic DNN with a linear output activation and the specified loss function.
@@ -433,12 +429,12 @@ class RegressorDNN(keras.models.Model):
         return hist
 
     def predict(self, x, return_uncertainties=True, batch_size=1000, **kwargs):
-        """
-        Args:
+        """Args:
             x: Input data
             batch_size: Size of batch to predict
             return_uncertainties: Returns derived uncertainties from evidential distribution parameters.
                                   If False, return the raw parameters themselves (mu, gamma, alpha, beta).
+
         Returns:
             If return_uncertainties is True: np.array(mu, aleatoric uncertainty, epistemic uncertainty)
             Else If return_uncertainties is False: np.array(mu, gamma, alpha, beta)

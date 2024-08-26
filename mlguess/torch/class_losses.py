@@ -5,8 +5,7 @@ import torch
 
 
 def get_device():
-    """
-    Get the device for PyTorch operations.
+    """Get the device for PyTorch operations.
 
     Returns:
         torch.device: The device to use, either "cuda" if CUDA is available, otherwise "cpu".
@@ -17,8 +16,7 @@ def get_device():
 
 
 def relu_evidence(y):
-    """
-    Apply the ReLU activation function to the input tensor.
+    """Apply the ReLU activation function to the input tensor.
 
     Args:
         y (torch.Tensor): Input tensor.
@@ -30,8 +28,7 @@ def relu_evidence(y):
 
 
 def exp_evidence(y):
-    """
-    Apply the exponential function to the input tensor with clamping.
+    """Apply the exponential function to the input tensor with clamping.
 
     Args:
         y (torch.Tensor): Input tensor.
@@ -43,8 +40,7 @@ def exp_evidence(y):
 
 
 def softplus_evidence(y):
-    """
-    Apply the Softplus activation function to the input tensor.
+    """Apply the Softplus activation function to the input tensor.
 
     Args:
         y (torch.Tensor): Input tensor.
@@ -56,8 +52,7 @@ def softplus_evidence(y):
 
 
 def kl_divergence(alpha, num_classes, device=None):
-    """
-    Compute the Kullback-Leibler divergence for a Dirichlet distribution.
+    """Compute the Kullback-Leibler divergence for a Dirichlet distribution.
 
     Args:
         alpha (torch.Tensor): The Dirichlet parameters (alpha).
@@ -87,8 +82,7 @@ def kl_divergence(alpha, num_classes, device=None):
 
 
 def loglikelihood_loss(y, alpha, device=None):
-    """
-    Compute the log-likelihood loss for a Dirichlet distribution.
+    """Compute the log-likelihood loss for a Dirichlet distribution.
 
     Args:
         y (torch.Tensor): Target values.
@@ -112,8 +106,7 @@ def loglikelihood_loss(y, alpha, device=None):
 
 
 def mse_loss(y, alpha, epoch_num, num_classes, annealing_step, device=None):
-    """
-    Compute the mean squared error loss with KL divergence for Dirichlet distributions.
+    """Compute the mean squared error loss with KL divergence for Dirichlet distributions.
 
     Args:
         y (torch.Tensor): Target values.
@@ -143,8 +136,7 @@ def mse_loss(y, alpha, epoch_num, num_classes, annealing_step, device=None):
 
 
 def edl_loss(func, y, alpha, epoch_num, num_classes, annealing_step, weights=None, device=None):
-    """
-    Compute the Evidence Deep Learning (EDL) loss.
+    """Compute the Evidence Deep Learning (EDL) loss.
 
     Args:
         func (callable): Function to apply to alpha (e.g., log, softplus).
@@ -179,8 +171,7 @@ def edl_loss(func, y, alpha, epoch_num, num_classes, annealing_step, weights=Non
 
 
 def edl_mse_loss(output, target, epoch_num, num_classes, annealing_step, weights=None, device=None):
-    """
-    Compute the Evidence Deep Learning (EDL) loss with mean squared error.
+    """Compute the Evidence Deep Learning (EDL) loss with mean squared error.
 
     Args:
         output (torch.Tensor): Model output tensor.
@@ -205,8 +196,7 @@ def edl_mse_loss(output, target, epoch_num, num_classes, annealing_step, weights
 
 
 def edl_log_loss(output, target, epoch_num, num_classes, annealing_step, weights=None, device=None):
-    """
-    Compute the Evidence Deep Learning (EDL) loss with the logarithm of evidence.
+    """Compute the Evidence Deep Learning (EDL) loss with the logarithm of evidence.
 
     Args:
         output (torch.Tensor): Model output tensor.
@@ -235,8 +225,7 @@ def edl_log_loss(output, target, epoch_num, num_classes, annealing_step, weights
 def edl_digamma_loss(
     output, target, epoch_num, num_classes, annealing_step, weights=None, device=None
 ):
-    """
-    Compute the Evidence Deep Learning (EDL) loss with the digamma function of evidence.
+    """Compute the Evidence Deep Learning (EDL) loss with the digamma function of evidence.
 
     Args:
         output (torch.Tensor): Model output tensor.

@@ -6,7 +6,7 @@ from mlguess.torch.class_losses import relu_evidence
 
 
 def enable_dropout(model):
-    """ Function to enable the dropout layers during test-time """
+    """Function to enable the dropout layers during test-time"""
     for m in model.modules():
         if m.__class__.__name__.startswith('Dropout'):
             m.train()
@@ -18,8 +18,7 @@ def monte_carlo_dropout(data_loader,
                         n_samples, 
                         batch_size=1024,
                         uncertainty=False):
-
-    """ Function to get the monte-carlo samples and uncertainty estimates
+    """Function to get the monte-carlo samples and uncertainty estimates
     through multiple forward passes
 
     Parameters

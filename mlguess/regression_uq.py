@@ -299,8 +299,7 @@ def plot_uncertainties(
 
 
 def compute_skill_score(y_true, y_pred, y_std, num_bins=10):
-    """
-    Computes the skill score with RMSE on the y-axis and binned spread on the x-axis.
+    """Computes the skill score with RMSE on the y-axis and binned spread on the x-axis.
 
     Parameters
     ----------
@@ -313,14 +312,13 @@ def compute_skill_score(y_true, y_pred, y_std, num_bins=10):
     num_bins : int, optional
         The number of bins to use for binning the spread.
 
-    Returns
+    Returns:
     -------
     ss : array-like
         A 2D array of skill scores.
     bins : array-like
         A 1D array of bin edges for the spread.
     """
-
     # Bin the spread
     spread_min, spread_max = np.percentile(y_std, [5, 95])
     if spread_max - spread_min > 20:
@@ -350,8 +348,7 @@ def plot_skill_score(
     legend_cols=None,
     save_location=False,
 ):
-    """
-    Plots the skill score with RMSE on the y-axis and binned spread on the x-axis.
+    """Plots the skill score with RMSE on the y-axis and binned spread on the x-axis.
 
     Parameters
     ----------

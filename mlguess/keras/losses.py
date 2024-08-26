@@ -57,8 +57,7 @@ def evidential_cat_loss(evi_coef, epoch_callback, class_weights=None):
 
 @keras.saving.register_keras_serializable()
 def evidential_reg_loss(evi_coef):
-    """
-    Loss function for an evidential regression model. The total loss is the Negative Log Likelihood of the
+    """Loss function for an evidential regression model. The total loss is the Negative Log Likelihood of the
     Normal Inverse Gamma summed with the error and scaled by the evidential coefficient. The coefficient has a strong
     influence on the uncertainty predictions (less so for the predictions themselves) of the model and must be tuned
     for individual datasets.
@@ -97,8 +96,8 @@ def evidential_reg_loss(evi_coef):
 
 @keras.saving.register_keras_serializable()
 def gaussian_nll(y, y_pred, reduce=True):
-    """
-    Loss function for a parametric Gaussian Loss.
+    """Loss function for a parametric Gaussian Loss.
+
     Args:
         y: Training data targets
         y_pred: Model predicitons
@@ -116,8 +115,7 @@ def gaussian_nll(y, y_pred, reduce=True):
 
 class EvidentialRegressionCoupledLoss(keras.losses.Loss):
     def __init__(self, r=1.0, coeff=1.0):
-        """
-        implementation of the loss from meinert and lavin that fixes issues with the original
+        """Implementation of the loss from meinert and lavin that fixes issues with the original
         evidential loss for regression. The loss couples the virtual evidence values with coefficient r.
         In this new loss, the regularizer is unnecessary.
         """

@@ -53,3 +53,6 @@ packages = ["mlguess", "mlguess.keras", "mlguess.torch"]
 [tool.setuptools.dynamic]
 version = {file = "mlguess/VERSION"}
 readme = {file = ["README.md"]}
+
+[tool.ruff]
+pydocstyle.convention = "google"

@@ -7,8 +7,7 @@ import subprocess
 
 
 def launch_pbs_jobs(config_file, trainer_path, args=''):
-    """
-    Launches a PBS job using the specified configuration file and trainer script.
+    """Launches a PBS job using the specified configuration file and trainer script.
 
     This function reads the configuration file to construct a PBS script, writes the
     script to a file, submits the job using `qsub`, and then cleans up the script file.
@@ -22,7 +21,6 @@ def launch_pbs_jobs(config_file, trainer_path, args=''):
         ValueError: If the 'pbs' section is not present in the configuration file.
 
     """
-
     # Load configuration file
     with open(config_file, "r") as f:
         config = yaml.safe_load(f)
@@ -74,8 +72,7 @@ def launch_pbs_jobs(config_file, trainer_path, args=''):
 
 
 def launch_distributed_jobs(config_file, script_path, launch=True):
-    """
-    Launches a distributed job across multiple nodes using PBS and MPI.
+    """Launches a distributed job across multiple nodes using PBS and MPI.
 
     This function generates a PBS script based on the provided configuration file,
     copies the necessary files, and optionally submits the job to the queue.
@@ -86,7 +83,6 @@ def launch_distributed_jobs(config_file, script_path, launch=True):
         launch (bool, optional): If True, submits the job using `qsub`. If False, only generates the script. Defaults to True.
 
     """
-
     with open(config_file) as cf:
         config = yaml.load(cf, Loader=yaml.FullLoader)
 

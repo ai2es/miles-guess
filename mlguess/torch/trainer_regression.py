@@ -16,8 +16,7 @@ from mlguess.torch.checkpoint import TorchFSDPCheckpointIO
 
 
 def cleanup():
-    """
-    Clean up and destroy the process group for distributed training.
+    """Clean up and destroy the process group for distributed training.
 
     This function is used to release resources and finalize the distributed training environment
     by destroying the process group. It should be called at the end of distributed training.
@@ -25,13 +24,11 @@ def cleanup():
     Returns:
         None
     """
-
     dist.destroy_process_group()
 
 
 def accum_log(log, new_logs):
-    """
-    Accumulate new log values into the existing log dictionary.
+    """Accumulate new log values into the existing log dictionary.
 
     Args:
         log (dict): The existing log dictionary to which new values will be added.
@@ -46,7 +43,6 @@ def accum_log(log, new_logs):
         updated_log = accum_log(old_log, new_log)
         # updated_log will be {'loss': 1.5, 'accuracy': 1.7}
     """
-
     for key, new_value in new_logs.items():
         old_value = log.get(key, 0.)
         log[key] = old_value + new_value
@@ -55,15 +51,13 @@ def accum_log(log, new_logs):
 
 class Trainer:
     def __init__(self, model, rank, module=False):
-        """
-        Initialize the Trainer class.
+        """Initialize the Trainer class.
 
         Args:
             model (nn.Module): The model to be trained.
             rank (int): The rank of the current process (used for distributed training).
             module (bool): Whether the model is wrapped in a `DistributedDataParallel` module. Default is False.
         """
-
         super(Trainer, self).__init__()
         self.model = model
         self.rank = rank
@@ -85,8 +79,7 @@ class Trainer:
         metrics,
         transform=None
     ):
-        """
-        Train the model for one epoch.
+        """Train the model for one epoch.
 
         Args:
             epoch (int): The current epoch number.
@@ -102,7 +95,6 @@ class Trainer:
         Returns:
             dict: Dictionary containing training metrics for the epoch.
         """
-
         batches_per_epoch = conf['trainer']['batches_per_epoch']
         grad_accum_every = conf['trainer']['grad_accum_every']
         amp = conf['trainer']['amp']
@@ -212,8 +204,7 @@ class Trainer:
         metrics,
         transform=None
     ):
-        """
-        Validate the model on the validation dataset.
+        """Validate the model on the validation dataset.
 
         Args:
             epoch (int): The current epoch number.
@@ -226,7 +217,6 @@ class Trainer:
         Returns:
             dict: Dictionary containing validation metrics for the epoch.
         """
-
         self.model.eval()
 
         valid_batches_per_epoch = conf['trainer']['valid_batches_per_epoch']
@@ -308,8 +298,7 @@ class Trainer:
         transform=None,
         split=None
     ):
-        """
-        Make predictions with the model on the test dataset.
+        """Make predictions with the model on the test dataset.
 
         Args:
             conf (dict): Configuration dictionary containing prediction settings.
@@ -324,7 +313,6 @@ class Trainer:
                 - predictions (torch.Tensor): The model's predictions on the test dataset.
                 - metrics (dict): Dictionary containing evaluation metrics.
         """
-
         self.model.eval()
         distributed = True if conf["trainer"]["mode"] in ["fsdp", "ddp"] else False
 
@@ -416,8 +404,7 @@ class Trainer:
         transform=None,
         trial=False
     ):
-        """
-        Train and validate the model.
+        """Train and validate the model.
 
         Args:
             conf (dict): Configuration dictionary containing training and validation settings.
@@ -435,7 +422,6 @@ class Trainer:
         Returns:
             dict: Dictionary containing training and validation metrics.
         """
-
         save_loc = conf['save_loc']
         start_epoch = conf['trainer']['start_epoch']
         epochs = conf['trainer']['epochs']

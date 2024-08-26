@@ -10,8 +10,7 @@ update_on_epoch = ['lambda', 'plateau']
 
 
 def load_scheduler(optimizer, conf):
-    """
-    Load a learning rate scheduler based on the configuration.
+    """Load a learning rate scheduler based on the configuration.
 
     Parameters:
     - optimizer: The PyTorch optimizer.
@@ -41,8 +40,7 @@ def load_scheduler(optimizer, conf):
 
 # Define a half-cosine decay learning rate schedule for the second phase
 def lr_lambda_phase2(step, total_updates_phase2=299000):
-    """
-    This function implements a half-cosine decay learning rate schedule
+    """This function implements a half-cosine decay learning rate schedule
     specifically for the second training phase.
 
     Args:
@@ -60,8 +58,7 @@ def lr_lambda_phase2(step, total_updates_phase2=299000):
 
 # Combine the learning rate schedules
 def phased_lr_lambda(step, total_updates_phase1=1000, total_updates_phase2=299000):
-    """
-    This function combines two learning rate schedules for a phased training
+    """This function combines two learning rate schedules for a phased training
     process.
 
     Args:
@@ -82,8 +79,7 @@ def phased_lr_lambda(step, total_updates_phase1=1000, total_updates_phase2=29900
 
 
 def lr_lambda_phase1(epoch, num_epochs=100, warmup_epochs=10):
-    """
-    This function implements a learning rate schedule based on the reference
+    """This function implements a learning rate schedule based on the reference
     paper (https://arxiv.org/pdf/2312.03876.pdf) for the first training phase.
 
     Args:
@@ -107,15 +103,14 @@ def lr_lambda_phase1(epoch, num_epochs=100, warmup_epochs=10):
 
 
 class CosineAnnealingWarmupRestarts(LRScheduler):
-    """
-        optimizer (Optimizer): Wrapped optimizer.
-        first_cycle_steps (int): First cycle step size.
-        cycle_mult(float): Cycle steps magnification. Default: -1.
-        max_lr(float): First cycle's max learning rate. Default: 0.1.
-        min_lr(float): Min learning rate. Default: 0.001.
-        warmup_steps(int): Linear warmup step size. Default: 0.
-        gamma(float): Decrease rate of max learning rate by cycle. Default: 1.
-        last_epoch (int): The index of last epoch. Default: -1.
+    """optimizer (Optimizer): Wrapped optimizer.
+    first_cycle_steps (int): First cycle step size.
+    cycle_mult(float): Cycle steps magnification. Default: -1.
+    max_lr(float): First cycle's max learning rate. Default: 0.1.
+    min_lr(float): Min learning rate. Default: 0.001.
+    warmup_steps(int): Linear warmup step size. Default: 0.
+    gamma(float): Decrease rate of max learning rate by cycle. Default: 1.
+    last_epoch (int): The index of last epoch. Default: -1.
     """
 
     def __init__(
@@ -193,8 +188,7 @@ class CosineAnnealingWarmupRestarts(LRScheduler):
 
 
 def annealed_probability(epoch, max_epochs=100, min_probability=0.01, max_probability=1.0):
-    """
-    Anneal the termination probability from 1 to a small value.
+    """Anneal the termination probability from 1 to a small value.
 
     Parameters:
     - epoch: The current epoch.
@@ -205,7 +199,6 @@ def annealed_probability(epoch, max_epochs=100, min_probability=0.01, max_probab
     Returns:
     - termination_probability: The annealed termination probability.
     """
-
     # Linear annealing schedule
     termination_probability = 1.0 - (epoch / max_epochs) * (1.0 - min_probability)
 

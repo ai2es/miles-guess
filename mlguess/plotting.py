@@ -7,8 +7,7 @@ from cartopy import feature as cfeature
 
 
 def plot_confusion_matrix(y_true, y_pred, classes, model_name, normalize=False, title=None, cmap=plt.cm.Blues, filename=None):
-    """
-    Function to plot a confusion matrix. 
+    """Function to plot a confusion matrix.
     """
     if not title:
         if normalize:

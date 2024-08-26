@@ -8,8 +8,7 @@ import traceback
 
 
 def regression_metrics(y_true, y_pred, total=None, split="val"):
-    """
-    Compute common regression metrics for continuous data.
+    """Compute common regression metrics for continuous data.
 
     Parameters:
     y_true (array-like): True target values.

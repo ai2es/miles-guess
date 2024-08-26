@@ -21,8 +21,7 @@ from torch.utils._pytree import tree_map
 # utils
 
 def load_model_state(conf, model, device):
-    """
-    Load the model state from a checkpoint file.
+    """Load the model state from a checkpoint file.
 
     This function restores the model state from a saved checkpoint. It supports loading models from
     different distributed training modes such as Fully Sharded Data Parallel (FSDP), Distributed Data Parallel (DDP),
@@ -43,7 +42,6 @@ def load_model_state(conf, model, device):
         FileNotFoundError: If the checkpoint file does not exist at the specified location.
         KeyError: If the checkpoint file does not contain the expected keys.
     """
-
     save_loc = os.path.expandvars(conf['save_loc'])
     #  Load an optimizer, gradient scaler, and learning rate scheduler, the optimizer must come after wrapping model using FSDP
     ckpt = os.path.join(save_loc, "checkpoint.pt")
@@ -63,8 +61,7 @@ def load_model_state(conf, model, device):
 
 
 def save_state_dict(state_dict: dict, checkpoint_file_path: str, use_safetensors: bool) -> None:
-    """
-    Save state dict to checkpoint.
+    """Save state dict to checkpoint.
 
     Args:
         state_dict (dict): state dict.
@@ -87,8 +84,7 @@ def save_state_dict(state_dict: dict, checkpoint_file_path: str, use_safetensors
 
 
 def load_state_dict(checkpoint_file_path: Path):
-    """
-    Load state dict from checkpoint.
+    """Load state dict from checkpoint.
 
     Args:
         checkpoint_file_path (Path): path to the checkpoint file.
@@ -96,7 +92,6 @@ def load_state_dict(checkpoint_file_path: Path):
     Returns:
         dict: state dict.
     """
-
     assert not is_dtensor_checkpoint(
         checkpoint_file_path
     ), f"Cannot load state dict from dtensor checkpoint {checkpoint_file_path}, you should convert the distributed tensors to gathered tensors with our CLI offline."
@@ -120,8 +115,7 @@ def load_state_dict(checkpoint_file_path: Path):
 
 
 def is_dtensor_checkpoint(checkpoint_file_path: str) -> bool:
-    """
-    Check whether the checkpoint file is a dtensor checkpoint.
+    """Check whether the checkpoint file is a dtensor checkpoint.
 
     Args:
         checkpoint_file_path (str): path to the checkpoint file.
@@ -136,8 +130,7 @@ def is_dtensor_checkpoint(checkpoint_file_path: str) -> bool:
 
 
 def is_safetensor_checkpoint(checkpoint_file_path: str) -> bool:
-    """
-    Check whether the checkpoint file is a safetensor checkpoint.
+    """Check whether the checkpoint file is a safetensor checkpoint.
 
     Args:
         checkpoint_file_path (str): path to the checkpoint file.
@@ -152,8 +145,7 @@ def is_safetensor_checkpoint(checkpoint_file_path: str) -> bool:
 
 
 def is_safetensors_available() -> bool:
-    """
-    Check whether safetensors is available.
+    """Check whether safetensors is available.
 
     Returns:
         bool: whether safetensors is available.
@@ -165,8 +157,7 @@ def is_safetensors_available() -> bool:
 
 
 class TorchFSDPCheckpointIO:
-    """
-    Handles loading and saving of checkpoints for models and optimizers
+    """Handles loading and saving of checkpoints for models and optimizers
     using Fully Sharded Data Parallel (FSDP) in PyTorch.
 
     This class provides methods to load unsharded models and optimizers from
@@ -199,8 +190,7 @@ class TorchFSDPCheckpointIO:
         optimizer.load_state_dict(sharded_osd)
 
     def save_unsharded_model(self, model, checkpoint, gather_dtensor, use_safetensors, rank):
-        """
-        Save model to checkpoint but only on master process.
+        """Save model to checkpoint but only on master process.
         """
         model = model.unwrap()
         cfg = FullStateDictConfig(offload_to_cpu=True, rank0_only=True)
@@ -210,8 +200,7 @@ class TorchFSDPCheckpointIO:
             save_state_dict(full_model_state, checkpoint_file_path=checkpoint, use_safetensors=use_safetensors)
 
     def save_unsharded_optimizer(self, optimizer, checkpoint, gather_dtensor, rank):
-        """
-        Save optimizer to checkpoint but only on master process.
+        """Save optimizer to checkpoint but only on master process.
         """
         fsdp_model = optimizer.unwrap_model()
         full_optimizer_state = FSDP.optim_state_dict(fsdp_model, optim=optimizer)
@@ -220,8 +209,7 @@ class TorchFSDPCheckpointIO:
 
 
 class ModelWrapper(nn.Module):
-    """
-    A wrapper class to define the common interface used FSDP.
+    """A wrapper class to define the common interface used FSDP.
 
     Args:
         module (nn.Module): The model to be wrapped.
@@ -232,8 +220,7 @@ class ModelWrapper(nn.Module):
         self.module = module
 
     def unwrap(self):
-        """
-        Unwrap the model to return the original model for checkpoint saving/loading.
+        """Unwrap the model to return the original model for checkpoint saving/loading.
         """
         if isinstance(self.module, ModelWrapper):
             return self.module.unwrap()
@@ -258,8 +245,7 @@ class TorchFSDPModel(ModelWrapper):
 
 
 class OptimizerWrapper:
-    """
-    A standard interface for optimizers wrapped by the Booster.
+    """A standard interface for optimizers wrapped by the Booster.
 
     Args:
         optim (Optimizer): The optimizer to be wrapped.
@@ -288,20 +274,17 @@ class OptimizerWrapper:
         return self.optim.add_param_group(*args, **kwargs)
 
     def step(self, *args, **kwargs):
-        """
-        Performs a single optimization step.
+        """Performs a single optimization step.
         """
         return self.optim.step(*args, **kwargs)
 
     def zero_grad(self, *args, **kwargs):
-        """
-        Clears the gradients of all optimized `torch.Tensor`.
+        """Clears the gradients of all optimized `torch.Tensor`.
         """
         self.optim.zero_grad(*args, **kwargs)
 
     def backward(self, loss: Tensor, *args, **kwargs):
-        """
-        Performs a backward pass on the loss.
+        """Performs a backward pass on the loss.
         """
         loss.backward(*args, **kwargs)
 
@@ -309,20 +292,17 @@ class OptimizerWrapper:
         torch.autograd.backward(tensor, grad)
 
     def state_dict(self):
-        """
-        Returns the optimizer state.
+        """Returns the optimizer state.
         """
         return self.optim.state_dict()
 
     def load_state_dict(self, *args, **kwargs):
-        """
-        Loads the optimizer state.
+        """Loads the optimizer state.
         """
         self.optim.load_state_dict(*args, **kwargs)
 
     def clip_grad_by_value(self, clip_value: float, *args, **kwargs) -> None:
-        """
-        Clips gradient of an iterable of parameters at specified min and max values.
+        """Clips gradient of an iterable of parameters at specified min and max values.
 
         Args:
             clip_value (float or int): maximum allowed value of the gradients. Gradients are clipped in the range
@@ -341,8 +321,7 @@ class OptimizerWrapper:
         *args,
         **kwargs,
     ) -> Tensor:
-        """
-        Clips gradient norm of an iterable of parameters.
+        """Clips gradient norm of an iterable of parameters.
 
         Args:
             max_norm (float or int): max norm of the gradients
@@ -357,8 +336,7 @@ class OptimizerWrapper:
         return norm
 
     def scale_loss(self, loss: Tensor):
-        """
-        Scales the loss for mixed precision training.
+        """Scales the loss for mixed precision training.
 
         Note: Only available for optimizers with mixed precision training.
 
@@ -370,8 +348,7 @@ class OptimizerWrapper:
         )
 
     def unscale_grad(self):
-        """
-        Unscale the gradients for mixed precision training.
+        """Unscale the gradients for mixed precision training.
 
         Note: Only available for optimizers with mixed precision training.
         """
@@ -380,8 +357,7 @@ class OptimizerWrapper:
         )
 
     def unwrap(self):
-        """
-        Unwrap the optimizer for checkpoint saving/loading.
+        """Unwrap the optimizer for checkpoint saving/loading.
         """
         return self.optim
 

@@ -3,8 +3,7 @@ from sklearn.metrics import precision_recall_fscore_support, roc_auc_score
 from hagelslag.evaluation.ProbabilityMetrics import DistributedROC
 
 class MetricsCalculator:
-    """
-    A class to calculate various metrics for model evaluation, including CSI, average accuracy,
+    """A class to calculate various metrics for model evaluation, including CSI, average accuracy,
     precision, recall, F1 score, AUC, MCE, and ECE.
 
     Args:
@@ -29,8 +28,7 @@ class MetricsCalculator:
     """
 
     def __init__(self, n_bins=10, use_uncertainty=False):
-        """
-        Initializes the MetricsCalculator with the specified number of bins and uncertainty flag.
+        """Initializes the MetricsCalculator with the specified number of bins and uncertainty flag.
 
         Args:
             n_bins (int, optional): Number of bins for MCE and ECE calculations. Default is 10.
@@ -42,8 +40,7 @@ class MetricsCalculator:
         self.bin_uppers = bin_boundaries[1:]
 
     def __call__(self, y_true, y_pred, split="train"):
-        """
-        Computes various metrics based on the true and predicted values.
+        """Computes various metrics based on the true and predicted values.
 
         Args:
             y_true (torch.Tensor): Tensor of true labels (one-hot encoded).
@@ -80,8 +77,7 @@ class MetricsCalculator:
         return logs
 
     def mean_csi(self, y, pred_probs):
-        """
-        Computes the mean Critical Success Index (CSI) for the predicted probabilities.
+        """Computes the mean Critical Success Index (CSI) for the predicted probabilities.
 
         Args:
             y (numpy.ndarray): Array of true labels (one-hot encoded).
@@ -104,8 +100,7 @@ class MetricsCalculator:
         return np.mean(rocs)
 
     def ave_acc(self, true_labels, pred_labels):
-        """
-        Computes the average accuracy for the true and predicted labels.
+        """Computes the average accuracy for the true and predicted labels.
 
         Args:
             true_labels (numpy.ndarray): Array of true labels.
@@ -125,8 +120,7 @@ class MetricsCalculator:
         )
 
     def mce(self, true_labels, pred_probs):
-        """
-        Computes the Maximum Calibration Error (MCE) for the predicted probabilities.
+        """Computes the Maximum Calibration Error (MCE) for the predicted probabilities.
 
         Args:
             true_labels (numpy.ndarray): Array of true labels.
@@ -158,8 +152,7 @@ class MetricsCalculator:
         return mce if mce != 0.0 else self.bin_lowers.shape[0]
 
     def ece(self, true_labels, pred_probs):
-        """
-        Computes the Expected Calibration Error (ECE) for the predicted probabilities.
+        """Computes the Expected Calibration Error (ECE) for the predicted probabilities.
 
         Args:
             true_labels (numpy.ndarray): Array of true labels.

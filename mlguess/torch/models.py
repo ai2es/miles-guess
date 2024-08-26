@@ -16,8 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 def get_device():
-    """
-    Determine the computing device to use.
+    """Determine the computing device to use.
 
     Checks if CUDA is available and returns the appropriate device
     (either "cuda" or "cpu").
@@ -31,8 +30,7 @@ def get_device():
 
 
 def seed_everything(seed=1234):
-    """
-    Seed all random number generators for reproducibility.
+    """Seed all random number generators for reproducibility.
 
     Args:
         seed (int): The seed value to use for all random number generators. Default is 1234.
@@ -55,8 +53,7 @@ def seed_everything(seed=1234):
 
 
 def init_weights(net, init_type='normal', init_gain=0.0, verbose=True):
-    """
-    Initialize network weights using the specified method.
+    """Initialize network weights using the specified method.
 
     Args:
         net (nn.Module): The network whose weights are to be initialized.
@@ -75,8 +72,7 @@ def init_weights(net, init_type='normal', init_gain=0.0, verbose=True):
         - 'orthogonal': Orthogonal initialization.
     """
     def init_func(m):
-        """
-        Initialization function for network layers.
+        """Initialization function for network layers.
 
         Args:
             m (nn.Module): The module to be initialized.
@@ -108,19 +104,18 @@ def init_weights(net, init_type='normal', init_gain=0.0, verbose=True):
 
 
 class DNN(nn.Module):
-    """
-        Initialize the Deep Neural Network (DNN) model.
+    """Initialize the Deep Neural Network (DNN) model.
 
-        Args:
-            input_size (int or list of int): Number of input features or a list of sizes for each input.
-            output_size (int or list of int): Number of output features or a list of sizes for each output.
-            layer_size (list of int): List of sizes for hidden layers. Default is [1000].
-            dr (list of float): Dropout rates for each layer. Default is [0.5].
-            batch_norm (bool): Whether to use batch normalization. Default is True.
-            lng (bool): Whether to use LinearNormalGamma layer at the end. Default is False.
-            weight_init (bool): Whether to initialize weights. Default is False.
-            num_layers (int): Number of layers to create if layer_size is a single number. Default is None.
-        """
+    Args:
+        input_size (int or list of int): Number of input features or a list of sizes for each input.
+        output_size (int or list of int): Number of output features or a list of sizes for each output.
+        layer_size (list of int): List of sizes for hidden layers. Default is [1000].
+        dr (list of float): Dropout rates for each layer. Default is [0.5].
+        batch_norm (bool): Whether to use batch normalization. Default is True.
+        lng (bool): Whether to use LinearNormalGamma layer at the end. Default is False.
+        weight_init (bool): Whether to initialize weights. Default is False.
+        num_layers (int): Number of layers to create if layer_size is a single number. Default is None.
+    """
     def __init__(self,
                  input_size,
                  output_size,
@@ -166,8 +161,7 @@ class DNN(nn.Module):
             self.apply(self.init_weights)
 
     def block(self, input_size, output_size, dr, batch_norm):
-        """
-        Create a block of layers for the network.
+        """Create a block of layers for the network.
 
         Args:
             input_size (int): Number of input features.
@@ -187,8 +181,7 @@ class DNN(nn.Module):
         return block
 
     def forward(self, x):
-        """
-        Perform a forward pass through the network.
+        """Perform a forward pass through the network.
 
         Args:
             x (torch.Tensor): Input tensor.
@@ -200,8 +193,7 @@ class DNN(nn.Module):
         return x
 
     def load_weights(self, weights_path: str) -> None:
-        """
-        Load model weights from a file.
+        """Load model weights from a file.
 
         Args:
             weights_path (str): Path to the weights file (.pt).
@@ -223,8 +215,7 @@ class DNN(nn.Module):
             )
 
     def predict(self, input, y_scaler=None, return_uncertainties=True, return_tuple=False):
-        """
-        Make predictions with the model.
+        """Make predictions with the model.
 
         Args:
             input (torch.Tensor): Input tensor.
@@ -244,8 +235,7 @@ class DNN(nn.Module):
         return output
 
     def predict_uncertainty(self, input, y_scaler=None):
-        """
-        Estimate uncertainties of predictions.
+        """Estimate uncertainties of predictions.
 
         Args:
             input (tuple of torch.Tensor): Tuple containing (mu, v, alpha, beta) tensors.
@@ -286,8 +276,7 @@ class DNN(nn.Module):
         return mu, aleatoric, epistemic, aleatoric + epistemic
 
     def predict_dropout(self, x, mc_forward_passes=10, batch_size=16):
-        """
-        Perform Monte Carlo Dropout predictions.
+        """Perform Monte Carlo Dropout predictions.
 
         Args:
             x (torch.Tensor): Input tensor.
@@ -326,8 +315,7 @@ class DNN(nn.Module):
 
     @classmethod
     def from_config(cls, conf, device="cpu"):
-        """
-        Create a model instance from configuration.
+        """Create a model instance from configuration.
 
         Args:
             conf (dict): Configuration dictionary with model parameters.

@@ -5,9 +5,7 @@ from torch.nn.utils import spectral_norm as SpectralNorm
 
 
 class LinearNormalGamma(nn.Module):
-
-    """
-    A linear layer with a Normal-Gamma distribution parameterization.
+    """A linear layer with a Normal-Gamma distribution parameterization.
 
     This module applies a linear transformation to the input, followed by
     reshaping and parameter extraction for a Normal-Gamma distribution. The
@@ -23,15 +21,12 @@ class LinearNormalGamma(nn.Module):
     """
 
     def __init__(self, in_channels, out_channels, spectral_norm=True):
-
-        """
-        Initializes the LinearNormalGamma module.
+        """Initializes the LinearNormalGamma module.
 
         Args:
             in_channels (int): The number of input features.
             out_channels (int): The number of output features.
         """
-
         super().__init__()
         if spectral_norm:
             self.linear = SpectralNorm(nn.Linear(in_channels, out_channels*4))
@@ -39,8 +34,7 @@ class LinearNormalGamma(nn.Module):
             self.linear = nn.Linear(in_channels, out_channels*4)
 
     def evidence(self, x):
-        """
-        Applies a log transformation to the input with a shift.
+        """Applies a log transformation to the input with a shift.
 
         Args:
             x (torch.Tensor): The input tensor.
@@ -51,8 +45,7 @@ class LinearNormalGamma(nn.Module):
         return torch.log(torch.exp(x) + 1)
 
     def forward(self, x):
-        """
-        Forward pass of the module.
+        """Forward pass of the module.
 
         Args:
             x (torch.Tensor): The input tensor of shape (batch_size, in_channels).
