@@ -20,7 +20,6 @@ def pit_histogram(y_true, y_pred, pred_type="ensemble", bins=10):
     Returns:
         pit_hist, pit_bins        
     """
-
     if pred_type == "gaussian":
         assert len(y_pred.shape) == 2 and y_pred.shape[1] == 2, "Pred shape is incorrect for Gaussian distribution"
         pit_quantiles = probability_integral_transform_gaussian(y_true, y_pred)
@@ -35,8 +34,7 @@ def pit_histogram(y_true, y_pred, pred_type="ensemble", bins=10):
 
 
 def pit_deviation(y_true, y_pred, pred_type="ensemble", bins=10):
-    """
-    Runs pit_histogram then calculates the pit_deviation. See docstring for pit_histogram.
+    """Runs pit_histogram then calculates the pit_deviation. See docstring for pit_histogram.
     
     """
     pit_hist, pit_bins = pit_histogram(y_true, y_pred, pred_type=pred_type, bins=bins)
@@ -46,16 +44,14 @@ def pit_deviation(y_true, y_pred, pred_type="ensemble", bins=10):
     return pit_deviation
 
 def pit_deviation_worst(n_bins):
-    """
-    Calculate the worst possible PITD score based on the number of bins. Assumes all the forecasts 
+    """Calculate the worst possible PITD score based on the number of bins. Assumes all the forecasts
     end up in one of the outermost bins.
     """
     return np.sqrt(1 / n_bins * ((n_bins - 1) * (1 / n_bins) ** 2 + (1 - 1 / n_bins) ** 2))
 
 
 def pit_deviation_skill_score(y_true, y_pred, pred_type="ensemble", bins=10):
-    """
-    Calculate PITD score relative to the worst possible PITD for a given number of bins.
+    """Calculate PITD score relative to the worst possible PITD for a given number of bins.
     Ranges from 0 to 1.
     """
     pitd_score = pit_deviation(y_true, y_pred, pred_type=pred_type, bins=bins)
@@ -64,14 +60,13 @@ def pit_deviation_skill_score(y_true, y_pred, pred_type="ensemble", bins=10):
 
 
 def probability_integral_transform_ensemble(y_true, y_pred_ens):
-    """
-    Calculate the probability integral transform quantiles for an ensemble of predictions
+    """Calculate the probability integral transform quantiles for an ensemble of predictions
 
     Args:
         y_true: true values with shape (n_samples,)
         y_pred_ens: predicted ensemble values with shape (n_samples, n_ensemble_members)
     
-    Returns: 
+    Returns:
         pit_quantiles: for each sample, the true value's quantile in the predicted distribution.
     """
     pit_quantiles = np.zeros(y_true.shape)
@@ -81,14 +76,13 @@ def probability_integral_transform_ensemble(y_true, y_pred_ens):
 
 
 def probability_integral_transform_gaussian(y_true, y_pred_gaussian):
-    """
-    Calculate the probability integral transform quantiles for a single Gaussian distribution.
+    """Calculate the probability integral transform quantiles for a single Gaussian distribution.
 
     Args:
         y_true: true values with shape (n_samples,)
         y_pred_gaussian: predicted Gaussian parameters (mean, stand. dev.) with shape (n_samples, n_params)
     
-    Returns: 
+    Returns:
         pit_quantiles: for each sample, the true value's quantile in the predicted distribution.
     """
     pit_quantiles = np.zeros(y_true.shape)
@@ -98,14 +92,13 @@ def probability_integral_transform_gaussian(y_true, y_pred_gaussian):
 
 
 def pit_gaussian_ensemble(y_true, y_pred_gauss_ens):
-    """
-    Calculate the probability integral transform quantile for an ensemble of Gaussian parametric models
+    """Calculate the probability integral transform quantile for an ensemble of Gaussian parametric models
 
     Args:
         y_true: true values with shape (n_samples,)
         y_pred_gauss_ens: ensemble of gaussian predictions (mean and standard deviation) with shape (n_samples, n_params, n_members)
  
-    Returns: 
+    Returns:
         pit_quantiles: for each sample, the true value's quantile in the predicted distribution.
     """
     pit_quantiles_members = np.zeros((y_true.shape[0], y_pred_gauss_ens.shape[-1]))

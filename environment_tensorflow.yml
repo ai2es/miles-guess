@@ -1,0 +1,34 @@
+name: guesstf
+channels:
+  - conda-forge
+dependencies:
+  - python=3.10
+  - numpy<2
+  - scipy
+  - matplotlib
+  - xarray
+  - metpy
+  - netcdf4
+  - pandas
+  - pyyaml
+  - pytest
+  - pip
+  - pyproj
+  - jupyter
+  - jupyterlab
+  - cartopy
+  - tqdm
+  - seaborn
+  - sphinx
+  - numba
+  - properscoring
+  - pyarrow
+  - imbalanced-learn
+  - pip:
+    - tensorflow
+    - keras
+    - torch
+    - echo-opt
+    - hagelslag
+    - bridgescaler
+    - -e .

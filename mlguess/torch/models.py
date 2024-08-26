@@ -1,23 +1,47 @@
 from torch import nn
 from torch.nn import init
-import torch, logging
+import torch
+import logging
 from torch.nn.utils import spectral_norm as SpectralNorm
 import warnings
 import random
 import numpy as np
 import os
+from mlguess.torch.checkpoint import load_model_state
+from mlguess.torch.layers import LinearNormalGamma
 
 warnings.filterwarnings("ignore")
 logger = logging.getLogger(__name__)
 
 
 def get_device():
+    """Determine the computing device to use.
+
+    Checks if CUDA is available and returns the appropriate device
+    (either "cuda" or "cpu").
+
+    Returns:
+        torch.device: The device to be used for computation.
+    """
     use_cuda = torch.cuda.is_available()
     device = torch.device("cuda" if use_cuda else "cpu")
     return device
 
 
 def seed_everything(seed=1234):
+    """Seed all random number generators for reproducibility.
+
+    Args:
+        seed (int): The seed value to use for all random number generators. Default is 1234.
+
+    Notes:
+        This function seeds:
+        - Python's random module
+        - NumPy's random module
+        - PyTorch's CPU and GPU random number generators
+        - Sets environment variable to control hash seed
+        - Configures PyTorch's cuDNN to be deterministic and benchmark mode.
+    """
     random.seed(seed)
     os.environ['PYTHONHASHSEED'] = str(seed)
     np.random.seed(seed)
@@ -28,16 +52,35 @@ def seed_everything(seed=1234):
 
 
 def init_weights(net, init_type='normal', init_gain=0.0, verbose=True):
-    """Initialize network weights.
-    Parameters:
-        net: Network. Network to be initialized.
-        init_type: String. The name of an initialization method: normal | xavier | kaiming | orthogonal.
-        init_gain: Float. Scaling factor for normal, xavier and orthogonal.
-        verbose: Boolean. Verbosity mode.
-    We use 'normal' in the original pix2pix and CycleGAN paper. But xavier and kaiming might
-    work better for some applications. Feel free to try yourself.
+    """Initialize network weights using the specified method.
+
+    Args:
+        net (nn.Module): The network whose weights are to be initialized.
+        init_type (str): The type of initialization method to use. Options are:
+                         'normal', 'xavier', 'kaiming', 'orthogonal'. Default is 'normal'.
+        init_gain (float): Scaling factor for 'normal', 'xavier', and 'orthogonal' methods. Default is 0.0.
+        verbose (bool): If True, logs the initialization method. Default is True.
+
+    Raises:
+        NotImplementedError: If an unsupported initialization method is specified.
+
+    Notes:
+        - 'normal': Gaussian distribution with mean 0 and specified standard deviation.
+        - 'xavier': Xavier initialization.
+        - 'kaiming': Kaiming initialization.
+        - 'orthogonal': Orthogonal initialization.
     """
-    def init_func(m):  # define the initialization function
+
+    def init_func(m):
+        """Initialization function for network layers.
+
+        Args:
+            m (nn.Module): The module to be initialized.
+
+        Notes:
+            - Applies the specified initialization method to Conv and Linear layers.
+            - Initializes BatchNorm2d layers with a normal distribution.
+        """
         classname = m.__class__.__name__
         if hasattr(m, 'weight') and (classname.find('Conv') != -1 or classname.find('Linear') != -1):
             if init_type == 'normal':
@@ -52,80 +95,114 @@ def init_weights(net, init_type='normal', init_gain=0.0, verbose=True):
                 raise NotImplementedError('initialization method [%s] is not implemented' % init_type)
             if hasattr(m, 'bias') and m.bias is not None:
                 init.constant_(m.bias.data, 0.0)
-        elif classname.find('BatchNorm2d') != -1:  # BatchNorm Layer's weight is not a matrix; only normal distribution applies.
+        elif classname.find(
+                'BatchNorm2d') != -1:  # BatchNorm Layer's weight is not a matrix; only normal distribution applies.
             init.normal_(m.weight.data, 1.0, init_gain)
             init.constant_(m.bias.data, 0.0)
+
     if verbose:
         logging.info('Initializing network with %s' % init_type)
     net.apply(init_func)
-    
-    
-class LinearNormalGamma(nn.Module):
-    def __init__(self, in_channels, out_channels):
-        super().__init__()
-        self.linear = SpectralNorm(nn.Linear(in_channels, out_channels*4))
 
-    def evidence(self, x):
-        return  torch.log(torch.exp(x) + 1)
 
-    def forward(self, x):
-        pred = self.linear(x).view(x.shape[0], -1, 4)
-        mu, logv, logalpha, logbeta = [w.squeeze(-1) for w in torch.split(pred, 1, dim=-1)]
-        return mu, self.evidence(logv), self.evidence(logalpha) + 1, self.evidence(logbeta)
-    
-    
-class DNN(torch.nn.Module):
-    
-    def __init__(self, 
+class DNN(nn.Module):
+    """Initialize the Deep Neural Network (DNN) model.
+
+    Args:
+        input_size (int or list of int): Number of input features or a list of sizes for each input.
+        output_size (int or list of int): Number of output features or a list of sizes for each output.
+        layer_size (list of int): List of sizes for hidden layers. Default is [1000].
+        dr (list of float): Dropout rates for each layer. Default is [0.5].
+        batch_norm (bool): Whether to use batch normalization. Default is True.
+        lng (bool): Whether to use LinearNormalGamma layer at the end. Default is False.
+        weight_init (bool): Whether to initialize weights. Default is False.
+        num_layers (int): Number of layers to create if layer_size is a single number. Default is None.
+    """
+
+    def __init__(self,
                  input_size,
                  output_size,
-                 block_sizes = [1000], 
-                 dr = [0.5], 
-                 batch_norm = True, 
-                 lng = False):
-        
+                 layer_size=[1000],
+                 dr=[0.5],
+                 batch_norm=True,
+                 lng=False,
+                 softmax=False,
+                 weight_init=False,
+                 num_layers=None):
+
+        input_size = len(input_size) if isinstance(input_size, (list, tuple)) else input_size
+        output_size = len(output_size) if isinstance(output_size, (list, tuple)) else output_size
+
         super(DNN, self).__init__()
         self.lng = lng
-        
-        if len(block_sizes) > 0:
-            blocks = self.block(input_size, block_sizes[0], dr[0], batch_norm)
-            if len(block_sizes) > 1:
-                for i in range(len(block_sizes)-1):
-                    blocks += self.block(block_sizes[i], block_sizes[i+1], dr[i], batch_norm)
+
+        if num_layers is not None and isinstance(layer_size, (int, float)):
+            layer_size = [layer_size] * num_layers
+            dr = [dr] * num_layers if isinstance(dr, (int, float)) else dr
+
+        if len(layer_size) > 0:
+            blocks = self.block(input_size, layer_size[0], dr[0], batch_norm)
+            if len(layer_size) > 1:
+                for i in range(len(layer_size) - 1):
+                    blocks += self.block(layer_size[i], layer_size[i + 1], dr[i], batch_norm)
             if lng:
-                blocks.append(LinearNormalGamma(block_sizes[-1], output_size))
+                blocks.append(LinearNormalGamma(layer_size[-1], output_size))
             else:
-                blocks.append(SpectralNorm(torch.nn.Linear(block_sizes[-1], output_size)))
+                blocks.append(nn.Linear(layer_size[-1], output_size))
+                if softmax:
+                    blocks.append(nn.Softmax(dim=-1))
         else:
             if lng:
                 blocks = [LinearNormalGamma(input_size, output_size)]
             else:
-                blocks = [SpectralNorm(torch.nn.Linear(input_size, output_size))]
-        self.fcn = torch.nn.Sequential(*blocks)
-        #self.apply(init_weights)
-        
+                blocks = [nn.Linear(input_size, output_size)]
+                if softmax:
+                    blocks.append(nn.Softmax(dim=-1))
+
+        self.fcn = nn.Sequential(*blocks)
+        if weight_init:
+            self.apply(self.init_weights)
+
     def block(self, input_size, output_size, dr, batch_norm):
-        block = [
-            SpectralNorm(torch.nn.Linear(input_size, output_size))
-        ]
+        """Create a block of layers for the network.
+
+        Args:
+            input_size (int): Number of input features.
+            output_size (int): Number of output features.
+            dr (float): Dropout rate.
+            batch_norm (bool): Whether to apply batch normalization.
+
+        Returns:
+            list: A list of layers constituting the block.
+        """
+        block = [SpectralNorm(nn.Linear(input_size, output_size))]
         if batch_norm:
-            block.append(torch.nn.BatchNorm1d(output_size))
-        block.append(torch.nn.LeakyReLU())
+            block.append(nn.BatchNorm1d(output_size))
+        block.append(nn.LeakyReLU())
         if dr > 0.0:
-            block.append(torch.nn.Dropout(dr))
+            block.append(nn.Dropout(dr))
         return block
 
     def forward(self, x):
+        """Perform a forward pass through the network.
+
+        Args:
+            x (torch.Tensor): Input tensor.
+
+        Returns:
+            torch.Tensor: Output tensor after passing through the network.
+        """
         x = self.fcn(x)
         return x
-    
-    def load_weights(self, weights_path: str) -> None:
 
-        """
-            Loads model weights given a valid weights path
-            
-            weights_path: str
-            - File path to the weights file (.pt)
+    def load_weights(self, weights_path: str) -> None:
+        """Load model weights from a file.
+
+        Args:
+            weights_path (str): Path to the weights file (.pt).
+
+        Returns:
+            None
         """
         logger.info(f"Loading model weights from {weights_path}")
 
@@ -139,46 +216,173 @@ class DNN(torch.nn.Module):
             logger.info(
                 f"Failed to load model weights at {weights_path} due to error {str(E)}"
             )
-    
-    def predict(self, x, batch_size = 32, return_numpy = True):
-        
-        if len(x.shape) != 2:
-            logger.warning(
-                f"The input size should be (batch_size, input size), but received {x.shape}"
+
+    def predict(self, input, y_scaler=None, return_uncertainties=True, return_tuple=False):
+        """Make predictions with the model.
+
+        Args:
+            input (torch.Tensor): Input tensor.
+            y_scaler (optional, callable): A scaler to inverse transform predictions. Default is None.
+            return_uncertainties (bool): Whether to return uncertainties along with predictions. Default is True.
+            return_tuple (bool): Whether to return the output as a tuple. Default is False.
+
+        Returns:
+            tuple or torch.Tensor:
+                - If `return_tuple` is True, returns a tuple (output).
+                - Otherwise, returns concatenated output tensor.
+        """
+        output = self(input)
+        if return_uncertainties:
+            mu, aleatoric, epistemic, total = self.predict_uncertainty(output, y_scaler=y_scaler)
+            return mu, aleatoric, epistemic, total
+        return output
+
+    def predict_uncertainty(self, input, y_scaler=None):
+        """Estimate uncertainties of predictions.
+
+        Args:
+            input (tuple of torch.Tensor): Tuple containing (mu, v, alpha, beta) tensors.
+            y_scaler (optional, callable): A scaler to inverse transform predictions. Default is None.
+
+        Returns:
+            tuple: A tuple containing:
+                - mu (torch.Tensor): Mean predictions.
+                - aleatoric (torch.Tensor): Aleatoric uncertainty.
+                - epistemic (torch.Tensor): Epistemic uncertainty.
+                - total (torch.Tensor): Total uncertainty (aleatoric + epistemic).
+        """
+        mu, v, alpha, beta = input
+        aleatoric = beta / (alpha - 1)
+        epistemic = beta / (v * (alpha - 1))
+
+        if len(mu.shape) == 1:
+            mu = mu.unsqueeze(1)
+            aleatoric = aleatoric.unsqueeze(1)
+            epistemic = epistemic.unsqueeze(1)
+
+        if y_scaler:
+            mu = mu.detach().cpu().numpy()
+            mu = y_scaler.inverse_transform(mu)
+            mu = torch.from_numpy(mu).to(aleatoric.device)
+
+            # Torch version of some of the sklearn scalers -- this needs updated later
+            # MinMaxScaler inverse transform
+            # if y_scaler:
+            #     min_val = torch.tensor(y_scaler.data_min_, device=mu.device)
+            #     max_val = torch.tensor(y_scaler.data_max_, device=mu.device)
+            #     mu = mu * (max_val - min_val) + min_val
+
+            for i in range(mu.shape[-1]):
+                aleatoric[:, i] *= self.training_var[i]
+                epistemic[:, i] *= self.training_var[i]
+
+        return mu, aleatoric, epistemic, aleatoric + epistemic
+
+    def predict_dropout(self, x, mc_forward_passes=10, batch_size=16):
+        """Perform Monte Carlo Dropout predictions.
+
+        Args:
+            x (torch.Tensor): Input tensor.
+            mc_forward_passes (int): Number of Monte Carlo forward passes. Default is 10.
+            batch_size (optional, int): Batch size for processing. Default is None.
+
+        Returns:
+            tuple: A tuple containing:
+                - pred_probs (numpy.ndarray): Mean predicted probabilities.
+                - aleatoric (numpy.ndarray): Aleatoric uncertainty.
+                - epistemic (numpy.ndarray): Epistemic uncertainty.
+                - entropy (numpy.ndarray): Entropy across multiple forward passes.
+                - mutual_info (numpy.ndarray): Mutual information across multiple forward passes.
+        """
+        with torch.no_grad():
+            batches = np.array_split(x, np.ceil(x.shape[0] / batch_size).astype(int))
+            y_prob = torch.stack(
+                [
+                    torch.vstack([self(torch.FloatTensor(lx)) for lx in batches])
+                    for _ in range(mc_forward_passes)
+                ]
             )
-            raise
-            
-        device = get_device()
-        logger.info(f"Mounting the model to device {device}")
-        self.to(device) 
+        pred_probs = y_prob.mean(axis=0).numpy()
+        epistemic = y_prob.var(axis=0).numpy()
+        aleatoric = torch.mean(y_prob * (1.0 - y_prob), axis=0).numpy()
+        y_prob = y_prob.numpy()
+
+        # Calculating entropy across multiple MCD forward passes
+        epsilon = 1e-10  # A small value to avoid log(0)
+        entropy = -np.sum(pred_probs * np.log(np.maximum(pred_probs, epsilon)), axis=-1)
+        # Calculating mutual information across multiple MCD forward passes
+        mutual_info = entropy - np.mean(
+            np.sum(-y_prob * np.log(np.maximum(y_prob, epsilon)), axis=-1), axis=0
+        )
+        return pred_probs, aleatoric, epistemic, entropy, mutual_info
+
+    @classmethod
+    def from_config(cls, conf, device="cpu"):
+        """Create a model instance from configuration.
+
+        Args:
+            conf (dict): Configuration dictionary with model parameters.
+            device (str): Device to load the model onto. Default is "cpu".
+
+        Returns:
+            DNN: The initialized model.
+        """
+        # init the model
+        model = cls(**conf["model"])
+
+        # load model weights
+        model = load_model_state(conf, model, device)
+
+        return model
+
+
+class CategoricalDNN(DNN):
+
+    def calc_uncertainty(self, y_pred):
+        num_classes = y_pred.shape[-1]
+        evidence = torch.relu(y_pred)
+        alpha = evidence + 1
+        S = torch.sum(alpha, axis=1, keepdims=True)
+        u = num_classes / S
+        prob = alpha / S
+        epistemic = prob * (1 - prob) / (S + 1)
+        aleatoric = prob - prob ** 2 - epistemic
+        return prob, u, aleatoric, epistemic
+
+    def predict(self, x, return_uncertainties=True, **kwargs):
         self.eval()
-        
-        if type(x) == torch.Tensor: #
-            x = x.numpy()
-        
-        if self.lng:
-            with torch.no_grad():
-                if batch_size < x.shape[0]:
-                    x_batch = np.array_split(x, x.shape[0] / batch_size)
-                    pred = torch.cat([
-                        torch.hstack(
-                            self.forward(torch.from_numpy(_x).float().to(device))
-                        ) for _x in x_batch
-                    ]).cpu()
-                else:
-                    pred = torch.hstack(
-                        self.forward(torch.from_numpy(x).float().to(device))
-                    ).cpu()
-        else:
-            with torch.no_grad():
-                if batch_size < x.shape[0]:
-                    x_batch = np.array_split(x, x.shape[0] / batch_size)
-                    pred = torch.cat([
-                        self.forward(torch.from_numpy(_x).float().to(device))
-                        for _x in x_batch
-                    ]).cpu()
-                else:
-                    pred = self.forward(
-                        torch.from_numpy(x).float().to(device)
-                    ).cpu()
-        return pred.numpy() if return_numpy else pred
+        with torch.no_grad():
+            output = self(x)
+            if return_uncertainties:
+                return self.calc_uncertainty(output)
+            else:
+                return output
+
+    def predict_uncertainty(self, input):
+        return self.predict(input, return_uncertainties=True)
+
+    def predict_dropout(self, input):
+        raise NotImplementedError
+
+
+if __name__ == "__main__":
+    # Model parameters
+    input_size = 10
+    output_size = 4
+    batch_size = 16
+
+    # Initialize the model
+    model = CategoricalDNN(input_size=input_size, output_size=output_size)
+
+    # Example input data (batch size 1, input size 10)
+    example_data = torch.rand((batch_size, input_size), dtype=torch.float32)
+
+    # Pass data through the model
+    predictions = model(example_data)
+    print("Predictions:", predictions)
+
+    prob, u, aleatoric, epistemic = model.predict_uncertainty(example_data)
+    print("Predictions:", prob)
+    print("Evidential u:", u)
+    print("Aleatoric u:", aleatoric)
+    print("Epistemic u:", epistemic)

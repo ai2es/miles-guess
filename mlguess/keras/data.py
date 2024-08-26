@@ -86,8 +86,7 @@ def preprocess_data(
     groups=[],
     seed=1000,
 ):
-    """
-    Function to select features and scale data for ML
+    """Function to select features and scale data for ML
     Args:
         data (dictionary of dataframes for training and validation data):
         input_features (list): Input features

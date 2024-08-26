@@ -1,14 +1,11 @@
 import keras
 import keras.layers as layers
 import keras.ops as ops
-from keras.src import activations
-from keras.src.layers.layer import Layer
 
 
 @keras.saving.register_keras_serializable()
 class DenseNormalGamma(layers.Layer):
-    """
-    Implements dense output layer for a deep evidential regression model.
+    """Implements dense output layer for a deep evidential regression model.
     Reference: https://www.mit.edu/~amini/pubs/pdf/deep-evidential-regression.pdf
     Source: https://github.com/aamini/evidential-deep-learning
 
@@ -36,8 +33,7 @@ class DenseNormalGamma(layers.Layer):
         self.eps = eps
 
     def evidence(self, x):
-        """
-        Converts values from continuous space to greater than 0 using a softplus activation function.
+        """Converts values from continuous space to greater than 0 using a softplus activation function.
 
         Args:
             x: input value
@@ -65,8 +61,7 @@ class DenseNormalGamma(layers.Layer):
       
 
 class DenseNormal(layers.Layer):
-    """
-    Dense output layer for a Gaussian distribution regression neural network.
+    """Dense output layer for a Gaussian distribution regression neural network.
 
     Args:
         units (int): Output size of regression tasks
