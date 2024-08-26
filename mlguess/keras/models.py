@@ -85,7 +85,7 @@ class CategoricalDNN(keras.models.Model):
                  annealing_coeff=1.0, use_noise=False, noise_sd=0.0, lr=0.001, use_dropout=False, dropout_alpha=0.2,
                  batch_size=128, epochs=2, kernel_reg=None, l1_weight=0.0, l2_weight=0.0, sgd_momentum=0.9,
                  adam_beta_1=0.9, adam_beta_2=0.999, epsilon=1e-7, decay=0, verbose=0, random_state=1000, n_classes=2,
-                 n_inputs=42, callbacks=None, **kwargs):
+                 n_inputs=42, callbacks=[], **kwargs):
 
         super().__init__(**kwargs)
         self.hidden_layers = hidden_layers
@@ -184,7 +184,7 @@ class CategoricalDNN(keras.models.Model):
             report_epoch_callback = ReportEpoch(e)
             self.loss = evidential_cat_loss(evi_coef=self.annealing_coeff,
                                             epoch_callback=report_epoch_callback)
-            self.callbacks = [report_epoch_callback]
+            self.callbacks.append(report_epoch_callback)
 
         super().compile(loss=self.loss,
                         optimizer=self.optimizer_obj,
@@ -257,6 +257,7 @@ class CategoricalDNN(keras.models.Model):
     def get_config(self):
         base_config = super().get_config()
         parameter_config = {hp: getattr(self, hp) for hp in self.hyperparameters}
+        parameter_config['callbacks'] = []
         return {**base_config, **parameter_config}
 
 
@@ -427,7 +428,7 @@ class RegressorDNN(keras.models.Model):
             self.loss = gaussian_nll
         super().compile(optimizer=self.optimizer_obj, loss=self.loss)
         hist = super().fit(x, y, epochs=self.epochs, batch_size=self.batch_size, **kwargs)
-        self.training_var = np.var(x, axis=-1)
+        self.training_var = np.var(y, axis=-1)
 
         return hist
 
@@ -477,5 +478,3 @@ class RegressorDNN(keras.models.Model):
         base_config = super().get_config()
         parameter_config = {hp: getattr(self, hp) for hp in self.hyperparameters}
         return {**base_config, **parameter_config}
-
-

@@ -10,7 +10,7 @@ license = {file = "LICENSE"}
 dynamic = ["version"]
 requires-python = ">=3.8"
 dependencies = [
-    "numpy<1.24",
+    "numpy<2",
     "scipy",
     "matplotlib",
     "pandas",
@@ -37,9 +37,9 @@ dependencies = [
     ]
 
 [project.optional-dependencies]
-tensorflow = ["tensorflow==2.16.0rc0"]
+tensorflow = ["tensorflow>=2.16.0"]
 
-tensorflow_gpu = ["tensorflow[and-cuda]==2.16.0rc0"]
+tensorflow_gpu = ["tensorflow[and-cuda]>=2.16.0"]
 
 torch = ["torch"]
 
