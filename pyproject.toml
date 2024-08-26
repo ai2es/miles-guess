@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "miles-guess"
-authors = [{name = "John Schreck, David John Gagne, Charlie Becker, Gabrielle Gantos", email = "milescore@ucar.edu"}]
+authors = [{name = "University Corporation for Atmospheric Research", email = "milescore@ucar.edu"}]
 readme = "README.md"
 license = {file = "LICENSE"}
 dynamic = ["version"]
@@ -32,8 +32,7 @@ dependencies = [
     "nbsphinx",
     "myst_parser",
     "sphinx_book_theme",
-    "pytest",
-    "hagelslag"
+    "hagelslag",
     ]
 
 [project.optional-dependencies]
@@ -41,7 +40,7 @@ tensorflow = ["tensorflow>=2.16.0"]
 
 tensorflow_gpu = ["tensorflow[and-cuda]>=2.16.0"]
 
-torch = ["torch"]
+torch = ["torch", "safetensors"]
 
 jax = ["jax"]
 
@@ -55,4 +54,4 @@ version = {file = "mlguess/VERSION"}
 readme = {file = ["README.md"]}
 
 [tool.ruff]
-pydocstyle.convention = "google"
+lint.pydocstyle.convention = "google"

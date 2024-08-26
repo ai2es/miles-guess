@@ -1,9 +1,9 @@
-name: guess
+name: guesstf
 channels:
   - conda-forge
 dependencies:
   - python=3.10
-  - numpy<1.24
+  - numpy<2
   - scipy
   - matplotlib
   - xarray
@@ -31,5 +31,4 @@ dependencies:
     - echo-opt
     - hagelslag
     - bridgescaler
-    - -e git+https://github.com/ai2es/ptype-physical.git#egg=ptype
     - -e .

@@ -2,6 +2,7 @@ import numpy as np
 from sklearn.metrics import precision_recall_fscore_support, roc_auc_score
 from hagelslag.evaluation.ProbabilityMetrics import DistributedROC
 
+
 class MetricsCalculator:
     """A class to calculate various metrics for model evaluation, including CSI, average accuracy,
     precision, recall, F1 score, AUC, MCE, and ECE.
@@ -112,8 +113,8 @@ class MetricsCalculator:
         return np.mean(
             [
                 (
-                    true_labels[np.where(true_labels == _label)]
-                    == pred_labels[np.where(true_labels == _label)]
+                        true_labels[np.where(true_labels == _label)]
+                        == pred_labels[np.where(true_labels == _label)]
                 ).mean()
                 for _label in np.unique(true_labels)
             ]
@@ -136,7 +137,7 @@ class MetricsCalculator:
         mce = 0.0
         for bin_lower, bin_upper in zip(self.bin_lowers, self.bin_uppers):
             in_bin = (confidences > bin_lower).astype(float) * (
-                confidences <= bin_upper
+                    confidences <= bin_upper
             ).astype(float)
             prop_in_bin = in_bin.astype(float).mean()
             in_bin = in_bin.squeeze(-1).astype(int)
@@ -167,7 +168,7 @@ class MetricsCalculator:
         ece = []
         for bin_lower, bin_upper in zip(self.bin_lowers, self.bin_uppers):
             in_bin = (confidences > bin_lower).astype(float) * (
-                confidences <= bin_upper
+                    confidences <= bin_upper
             ).astype(float)
             prop_in_bin = in_bin.astype(float).mean()
             in_bin = in_bin.squeeze(-1).astype(int)
@@ -176,7 +177,7 @@ class MetricsCalculator:
                     accuracy_in_bin = accuracies[in_bin].astype(float).mean()
                     avg_confidence_in_bin = confidences[in_bin].mean()
                     avg_calibration = (
-                        np.abs(avg_confidence_in_bin - accuracy_in_bin) * prop_in_bin
+                            np.abs(avg_confidence_in_bin - accuracy_in_bin) * prop_in_bin
                     )
                     ece.append(avg_calibration)
                 except ValueError:

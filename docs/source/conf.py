@@ -17,6 +17,7 @@ release = '2024.1.0'
 extensions = ['myst_parser',
               'sphinx.ext.napoleon',
               'sphinx.ext.intersphinx',
+              'sphinx.ext.mathjax',
               'nbsphinx']
 
 templates_path = ['_templates']

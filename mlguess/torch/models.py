@@ -10,7 +10,6 @@ import os
 from mlguess.torch.checkpoint import load_model_state
 from mlguess.torch.layers import LinearNormalGamma
 
-
 warnings.filterwarnings("ignore")
 logger = logging.getLogger(__name__)
 
@@ -71,6 +70,7 @@ def init_weights(net, init_type='normal', init_gain=0.0, verbose=True):
         - 'kaiming': Kaiming initialization.
         - 'orthogonal': Orthogonal initialization.
     """
+
     def init_func(m):
         """Initialization function for network layers.
 
@@ -95,9 +95,11 @@ def init_weights(net, init_type='normal', init_gain=0.0, verbose=True):
                 raise NotImplementedError('initialization method [%s] is not implemented' % init_type)
             if hasattr(m, 'bias') and m.bias is not None:
                 init.constant_(m.bias.data, 0.0)
-        elif classname.find('BatchNorm2d') != -1:  # BatchNorm Layer's weight is not a matrix; only normal distribution applies.
+        elif classname.find(
+                'BatchNorm2d') != -1:  # BatchNorm Layer's weight is not a matrix; only normal distribution applies.
             init.normal_(m.weight.data, 1.0, init_gain)
             init.constant_(m.bias.data, 0.0)
+
     if verbose:
         logging.info('Initializing network with %s' % init_type)
     net.apply(init_func)
@@ -116,6 +118,7 @@ class DNN(nn.Module):
         weight_init (bool): Whether to initialize weights. Default is False.
         num_layers (int): Number of layers to create if layer_size is a single number. Default is None.
     """
+
     def __init__(self,
                  input_size,
                  output_size,
@@ -262,12 +265,12 @@ class DNN(nn.Module):
             mu = y_scaler.inverse_transform(mu)
             mu = torch.from_numpy(mu).to(aleatoric.device)
 
-        # Torch version of some of the sklearn scalers -- this needs updated later
-        # MinMaxScaler inverse transform
-        # if y_scaler:
-        #     min_val = torch.tensor(y_scaler.data_min_, device=mu.device)
-        #     max_val = torch.tensor(y_scaler.data_max_, device=mu.device)
-        #     mu = mu * (max_val - min_val) + min_val
+            # Torch version of some of the sklearn scalers -- this needs updated later
+            # MinMaxScaler inverse transform
+            # if y_scaler:
+            #     min_val = torch.tensor(y_scaler.data_min_, device=mu.device)
+            #     max_val = torch.tensor(y_scaler.data_max_, device=mu.device)
+            #     mu = mu * (max_val - min_val) + min_val
 
             for i in range(mu.shape[-1]):
                 aleatoric[:, i] *= self.training_var[i]
@@ -331,6 +334,7 @@ class DNN(nn.Module):
         model = load_model_state(conf, model, device)
 
         return model
+
 
 class CategoricalDNN(DNN):
 

@@ -36,10 +36,10 @@ mlguess.keras.models module
    :undoc-members:
    :show-inheritance:
 
-mlguess.keras.models\_deprecated module
+mlguess.keras.deprecated module
 ---------------------------------------
 
-.. automodule:: mlguess.keras.models_deprecated
+.. automodule:: mlguess.keras.deprecated
    :members:
    :undoc-members:
    :show-inheritance:

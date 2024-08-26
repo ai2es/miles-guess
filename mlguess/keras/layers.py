@@ -1,8 +1,6 @@
 import keras
 import keras.layers as layers
 import keras.ops as ops
-from keras.src import activations
-from keras.src.layers.layer import Layer
 
 
 @keras.saving.register_keras_serializable()

@@ -1,7 +1,10 @@
+# Keras in MILES-GUESS
+
 Welcome to the Keras users page. The instructions below outline how to compute various UQ quantities like aleatoric and epistemic using different modeling approaches.
 
+## Regression Models
 
-### 1a. Train/evaluate a deterministic multi-layer perceptrion (MLP) on the SL dataset:
+### 1a. Train/evaluate a deterministic multi-layer perceptron (MLP) on the SL dataset:
 ```bash
 python3 applications/train_mlp_SL.py -c config/model_mlp_SL.yml
 ```
@@ -15,6 +18,8 @@ python applications/train_gaussian_SL.py -c config/model_gaussian_SL.yml
 ```bash
 python applications/train_evidential_SL.py -c config/model_evidential_SL.yml
 ```
+
+## Classification Models
 
 ### 2a. Train a categorical MLP classifier on the p-type dataset:
 ```bash

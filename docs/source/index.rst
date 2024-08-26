@@ -11,6 +11,8 @@ Welcome to miles-guess's documentation!
    :caption: Contents:
 
    install.rst
+   keras.md
+   torch.md
    mlguess.rst
    notebooks/classifier_example.ipynb
    notebooks/regression_example.ipynb

@@ -11,11 +11,12 @@ def enable_dropout(model):
         if m.__class__.__name__.startswith('Dropout'):
             m.train()
 
+
 def monte_carlo_dropout(data_loader,
                         forward_passes,
                         model,
                         n_classes,
-                        n_samples, 
+                        n_samples,
                         batch_size=1024,
                         uncertainty=False):
     """Function to get the monte-carlo samples and uncertainty estimates
@@ -43,7 +44,7 @@ def monte_carlo_dropout(data_loader,
                 if uncertainty:
                     evidence = relu_evidence(output)
                     alpha = evidence + 1
-                    #u = num_classes / torch.sum(alpha, dim=1, keepdim=True)
+                    # u = num_classes / torch.sum(alpha, dim=1, keepdim=True)
                     output = alpha / torch.sum(alpha, dim=1, keepdim=True)
                 else:
                     output = F.softmax(output, dim=1)  # shape (n_samples, n_classes)
@@ -64,10 +65,10 @@ def monte_carlo_dropout(data_loader,
     if n_classes > 1:
         epsilon = sys.float_info.min
         # Calculating entropy across multiple MCD forward passes 
-        entropy = -np.sum(mean*np.log(mean + epsilon), axis=-1)  # shape (n_samples,)
+        entropy = -np.sum(mean * np.log(mean + epsilon), axis=-1)  # shape (n_samples,)
 
         # Calculating mutual information across multiple MCD forward passes 
-        mutual_info = entropy - np.mean(np.sum(-dropout_predictions*np.log(dropout_predictions + epsilon),
+        mutual_info = entropy - np.mean(np.sum(-dropout_predictions * np.log(dropout_predictions + epsilon),
                                                axis=-1), axis=0)  # shape (n_samples,)
 
         results["entropy"] = entropy

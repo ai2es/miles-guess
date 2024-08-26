@@ -1,13 +1,14 @@
 import sys
 import keras
 import keras.ops as ops
+import keras.layers as layers
+import keras.optimizers as optimizers
 import numpy as np
-from keras.regularizers import L1, L2, L1L2
-from keras.layers import Dense, GaussianNoise, Dropout
+# from keras.layers import Dense, GaussianNoise, Dropout
 from mlguess.keras.layers import DenseNormalGamma, DenseNormal
 from mlguess.keras.losses import evidential_cat_loss, evidential_reg_loss, gaussian_nll
 from mlguess.keras.callbacks import ReportEpoch
-from keras.optimizers import Adam, SGD
+# from keras.optimizers import Adam, SGD
 
 
 
@@ -42,9 +43,9 @@ class CategoricalDNN(keras.models.Model):
         classifier: (boolean) If training on classes
 
     Example:
-            When evidential==True, the output activation and the loss function will be overridden under the hood. When
-            evidential==False, it will use the parameters specified and ignore the annealing_coeff.
-            Note: Model compilation happens under the hood when .fit() is called.
+        When evidential==True, the output activation and the loss function will be overridden under the hood. When
+        evidential==False, it will use the parameters specified and ignore the annealing_coeff.
+        Note: Model compilation happens under the hood when .fit() is called.::
 
             n_samples = 1000
             n_features = 23
@@ -76,6 +77,7 @@ class CategoricalDNN(keras.models.Model):
                                    lr=0.0001)
             hist = model.fit(x_train, y_train)
             p = model.predict(x_train, return_uncertainties=False, batch_size=5000)
+
     """
 
     def __init__(self, hidden_layers=2, hidden_neurons=64, evidential=False, activation="relu",
@@ -83,8 +85,14 @@ class CategoricalDNN(keras.models.Model):
                  annealing_coeff=1.0, use_noise=False, noise_sd=0.0, lr=0.001, use_dropout=False, dropout_alpha=0.2,
                  batch_size=128, epochs=2, kernel_reg=None, l1_weight=0.0, l2_weight=0.0, sgd_momentum=0.9,
                  adam_beta_1=0.9, adam_beta_2=0.999, epsilon=1e-7, decay=0, verbose=0, random_state=1000, n_classes=2,
-                 n_inputs=42, callbacks=[], **kwargs):
+                 n_inputs=42, callbacks=None, **kwargs):
+        """
+        Create Keras neural network model and compile it.
 
+        Args:
+            inputs (int): Number of input predictor variables
+            outputs (int): Number of output predictor variables
+        """
         super().__init__(**kwargs)
         self.hidden_layers = hidden_layers
         self.hidden_neurons = hidden_neurons
@@ -115,63 +123,62 @@ class CategoricalDNN(keras.models.Model):
         self.random_state = random_state
         self.n_classes = n_classes
         self.n_inputs = n_inputs
-        self.callbacks = callbacks
+        if callbacks is None:
+            self.callbacks = []
+        else:
+            self.callbacks = callbacks
+
         self.hyperparameters = ["hidden_layers", "hidden_neurons", "evidential", "activation", "output_activation",
                                 "optimizer", "sgd_momentum", "adam_beta_1", "adam_beta_2", "epsilon", "loss",
                                 "loss_weights", "annealing_coeff", "lr", "kernel_reg", "l1_weight", "l2_weight",
                                 "batch_size", "use_noise", "noise_sd", "use_dropout", "dropout_alpha", "epochs",
                                 "callbacks", "decay", "verbose", "random_state", "n_classes", "n_inputs"]
-        """
-        Create Keras neural network model and compile it.
-        Args:
-            inputs (int): Number of input predictor variables
-            outputs (int): Number of output predictor variables
-        """
+
 
         if self.kernel_reg == "l1":
-            self.kernel_reg = L1(self.l1_weight)
+            self.kernel_reg = keras.regularizers.L1(self.l1_weight)
         elif self.kernel_reg == "l2":
-            self.kernel_reg = L2(self.l2_weight)
+            self.kernel_reg = keras.regularizers.L2(self.l2_weight)
         elif self.kernel_reg == "l1_l2":
-            self.kernel_reg = L1L2(self.l1_weight, self.l2_weight)
+            self.kernel_reg = keras.regularizers.L1L2(self.l1_weight, self.l2_weight)
         else:
             self.kernel_reg = None
 
         if self.optimizer == "adam":
-            self.optimizer_obj = Adam(learning_rate=self.lr,
+            self.optimizer_obj = optimizers.Adam(learning_rate=self.lr,
                                       beta_1=self.adam_beta_1,
                                       beta_2=self.adam_beta_2,
                                       epsilon=self.epsilon)
         elif self.optimizer == "sgd":
-            self.optimizer_obj = SGD(learning_rate=self.lr, momentum=self.sgd_momentum)
+            self.optimizer_obj = optimizers.SGD(learning_rate=self.lr, momentum=self.sgd_momentum)
 
         if self.evidential:
             self.output_activation = "linear"
 
         self.model_layers = []
-        self.model_layers.append(Dense(self.n_inputs,
+        self.model_layers.append(layers.Dense(self.n_inputs,
                                        activation=self.activation,
                                        kernel_regularizer=self.kernel_reg,
                                        name="input_dense"))
         for h in range(self.hidden_layers):
-            self.model_layers.append(Dense(self.hidden_neurons,
+            self.model_layers.append(layers.Dense(self.hidden_neurons,
                                            activation=self.activation,
                                            kernel_regularizer=self.kernel_reg,
                                            name=f"dense_{h:02d}"))
             if self.use_dropout:
-                self.model_layers.append(Dropout(self.dropout_alpha, name=f"dropout_{h:02d}"))
+                self.model_layers.append(layers.Dropout(self.dropout_alpha, name=f"dropout_{h:02d}"))
             if self.use_noise:
-                self.model_layers.append(GaussianNoise(self.noise_sd, name=f"noise_{h:02d}"))
+                self.model_layers.append(layers.GaussianNoise(self.noise_sd, name=f"noise_{h:02d}"))
 
-        self.model_layers.append(Dense(self.n_classes,
+        self.model_layers.append(layers.Dense(self.n_classes,
                                        activation=self.output_activation,
                                        name="dense_output"))
 
     def call(self, inputs):
 
         mod = self.model_layers[0](inputs)
-        for l in range(1, len(self.model_layers)):
-            mod = self.model_layers[l](mod)
+        for layer in range(1, len(self.model_layers)):
+            mod = self.model_layers[layer](mod)
 
         return mod
 
@@ -194,7 +201,10 @@ class CategoricalDNN(keras.models.Model):
         return hist
 
     def predict(self, x, return_uncertainties=True, **kwargs):
-        """Args:
+        """
+        Make a prediction with the trained model.
+
+        Args:
             x: Input data
             batch_size: Size of batch to predict
             return_uncertainties: Returns derived uncertainties from evidential distribution parameters.
@@ -213,7 +223,8 @@ class CategoricalDNN(keras.models.Model):
         else:
             return output
 
-    def calc_uncertainty(self, y_pred):
+    @staticmethod
+    def calc_uncertainty(y_pred):
         num_classes = y_pred.shape[-1]
         evidence = ops.relu(y_pred)
         alpha = evidence + 1
@@ -283,11 +294,11 @@ class RegressorDNN(keras.models.Model):
         metrics: Optional list of metrics to monitor during training.
 
     Example:
-            When evidential==True or uncertainty==True, the output activation and the loss function will be overridden
-            under the hood. If both are True, the evidential model will override. When both are set to False,
-            it will train a generic DNN with a linear output activation and the specified loss function.
-            'evi_coeff' is only used when evidential==True and is otherwise ignored.
-            Note: Model compilation happens under the hood when .fit() is called.
+        When evidential==True or uncertainty==True, the output activation and the loss function will be overridden
+        under the hood. If both are True, the evidential model will override. When both are set to False,
+        it will train a generic DNN with a linear output activation and the specified loss function.
+        'evi_coeff' is only used when evidential==True and is otherwise ignored.
+        Note: Model compilation happens under the hood when .fit() is called.::
 
             n_samples = 1000
             n_features = 23
@@ -325,6 +336,7 @@ class RegressorDNN(keras.models.Model):
                                  epochs=10)
             model.fit(x_train, y_train)
             p = model.predict(x_train, return_uncertainties=False)
+
     """
     def __init__(self, hidden_layers=2, hidden_neurons=64, evidential=False, activation="relu", optimizer="adam",
                  loss_weights=None, use_noise=False, noise_sd=0.01, lr=0.00001, use_dropout=False, dropout_alpha=0.1,
@@ -371,48 +383,49 @@ class RegressorDNN(keras.models.Model):
                                 "verbose", "n_inputs", "n_output_tasks", "epsilon", "evi_coeff", "uncertainty"]
 
         if self.kernel_reg == "l1":
-            self.kernel_reg = L1(self.l1_weight)
+            self.kernel_reg = keras.regularizers.L1(self.l1_weight)
         elif self.kernel_reg == "l2":
-            self.kernel_reg = L2(self.l2_weight)
+            self.kernel_reg = keras.regularizers.L2(self.l2_weight)
         elif self.kernel_reg == "l1_l2":
-            self.kernel_reg = L1L2(self.l1_weight, self.l2_weight)
+            self.kernel_reg = keras.regularizers.L1L2(self.l1_weight, self.l2_weight)
         else:
             self.kernel_reg = None
 
         if self.optimizer == "adam":
-            self.optimizer_obj = Adam(learning_rate=self.lr,
+            self.optimizer_obj = optimizers.Adam(learning_rate=self.lr,
                                       beta_1=self.adam_beta_1,
                                       beta_2=self.adam_beta_2,
                                       epsilon=self.epsilon)
         elif self.optimizer == "sgd":
-            self.optimizer_obj = SGD(learning_rate=self.lr, momentum=self.sgd_momentum)
+            self.optimizer_obj = optimizers.SGD(learning_rate=self.lr, momentum=self.sgd_momentum)
 
         self.model_layers = []
-        self.model_layers.append(Dense(self.n_inputs,
+        self.model_layers.append(layers.Dense(self.n_inputs,
                                        activation=self.activation,
                                        kernel_regularizer=self.kernel_reg,
                                        name="input_dense"))
         for h in range(self.hidden_layers):
-            self.model_layers.append(Dense(self.hidden_neurons,
+            self.model_layers.append(layers.Dense(self.hidden_neurons,
                                            activation=self.activation,
                                            kernel_regularizer=self.kernel_reg,
                                            name=f"dense_{h:02d}"))
             if self.use_dropout:
-                self.model_layers.append(Dropout(self.dropout_alpha, name=f"dropout_{h:02d}"))
+                self.model_layers.append(layers.Dropout(self.dropout_alpha, name=f"dropout_{h:02d}"))
             if self.use_noise:
-                self.model_layers.append(GaussianNoise(self.noise_sd, name=f"noise_{h:02d}"))
+                self.model_layers.append(layers.GaussianNoise(self.noise_sd, name=f"noise_{h:02d}"))
 
         if self.evidential:
             self.model_layers.append(DenseNormalGamma(self.n_output_tasks, name="dense_output"))
         elif self.uncertainty:
             self.model_layers.append(DenseNormal(self.n_output_tasks, name="dense_output"))
         else:
-            self.model_layers.append(Dense(self.n_output_tasks, name="dense_output"))
+            self.model_layers.append(layers.Dense(self.n_output_tasks, name="dense_output"))
+
     def call(self, inputs):
 
         layer_output = self.model_layers[0](inputs)
-        for l in range(1, len(self.model_layers)):
-            layer_output = self.model_layers[l](layer_output)
+        for layer in range(1, len(self.model_layers)):
+            layer_output = self.model_layers[layer](layer_output)
 
         return layer_output
 
@@ -439,14 +452,14 @@ class RegressorDNN(keras.models.Model):
             If return_uncertainties is True: np.array(mu, aleatoric uncertainty, epistemic uncertainty)
             Else If return_uncertainties is False: np.array(mu, gamma, alpha, beta)
         """
-        if type(return_uncertainties) != bool:
+        if not isinstance(return_uncertainties, bool):
             raise ValueError("return_uncertainties must be a boolean")
 
         if (not self.evidential) and (not self.uncertainty) and return_uncertainties:
             raise NotImplementedError("You can only return uncertainty estimates when 'evidential' or 'uncertainty' is"
                                       " True. Otherwise you can set 'return_uncertainties' to False to return predictions.")
 
-        elif (self.evidential) and return_uncertainties:
+        elif self.evidential and return_uncertainties:
             return self.calc_uncertainties(super().predict(x, batch_size=batch_size))
 
         else:

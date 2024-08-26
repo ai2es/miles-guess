@@ -1,4 +1,3 @@
-
 import torch
 from torch import nn
 from torch.nn.utils import spectral_norm as SpectralNorm
@@ -29,9 +28,9 @@ class LinearNormalGamma(nn.Module):
         """
         super().__init__()
         if spectral_norm:
-            self.linear = SpectralNorm(nn.Linear(in_channels, out_channels*4))
+            self.linear = SpectralNorm(nn.Linear(in_channels, out_channels * 4))
         else:
-            self.linear = nn.Linear(in_channels, out_channels*4)
+            self.linear = nn.Linear(in_channels, out_channels * 4)
 
     def evidence(self, x):
         """Applies a log transformation to the input with a shift.

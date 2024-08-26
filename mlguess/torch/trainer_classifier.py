@@ -67,7 +67,8 @@ class Trainer:
         super(Trainer, self).__init__()
         self.model = model
         self.rank = rank
-        self.device = torch.device(f"cuda:{rank % torch.cuda.device_count()}") if torch.cuda.is_available() else torch.device("cpu")
+        self.device = torch.device(
+            f"cuda:{rank % torch.cuda.device_count()}") if torch.cuda.is_available() else torch.device("cpu")
 
         if module:
             self.model = self.model.module
@@ -76,15 +77,15 @@ class Trainer:
 
     # Training function.
     def train_one_epoch(
-        self,
-        epoch,
-        conf,
-        trainloader,
-        optimizer,
-        criterion,
-        scaler,
-        scheduler,
-        metrics
+            self,
+            epoch,
+            conf,
+            trainloader,
+            optimizer,
+            criterion,
+            scaler,
+            scheduler,
+            metrics
     ):
         """Train the model for one epoch.
 
@@ -191,7 +192,8 @@ class Trainer:
             if self.rank == 0:
                 batch_group_generator.set_description(to_print)
 
-            if conf['trainer']['use_scheduler'] and conf['trainer']['scheduler']['scheduler_type'] == "cosine-annealing":
+            if conf['trainer']['use_scheduler'] and conf['trainer']['scheduler'][
+                'scheduler_type'] == "cosine-annealing":
                 scheduler.step()
 
             if i >= batches_per_epoch and i > 0:
@@ -207,12 +209,12 @@ class Trainer:
         return results_dict
 
     def validate(
-        self,
-        epoch,
-        conf,
-        valid_loader,
-        criterion,
-        metrics
+            self,
+            epoch,
+            conf,
+            valid_loader,
+            criterion,
+            metrics
     ):
         """Validate the model on the validation dataset.
 
@@ -306,12 +308,12 @@ class Trainer:
         return results_dict
 
     def predict(
-        self,
-        conf,
-        test_loader,
-        criterion,
-        metrics,
-        split=None
+            self,
+            conf,
+            test_loader,
+            criterion,
+            metrics,
+            split=None
     ):
         """Make predictions with the model on the test dataset.
 
@@ -413,17 +415,17 @@ class Trainer:
         }
 
     def fit(
-        self,
-        conf,
-        train_loader,
-        valid_loader,
-        optimizer,
-        train_criterion,
-        valid_criterion,
-        scaler,
-        scheduler,
-        metrics,
-        trial=False
+            self,
+            conf,
+            train_loader,
+            valid_loader,
+            optimizer,
+            train_criterion,
+            valid_criterion,
+            scaler,
+            scheduler,
+            metrics,
+            trial=False
     ):
         """Train and validate the model.
 
@@ -560,23 +562,25 @@ class Trainer:
                 if conf["trainer"]["mode"] != "fsdp":
 
                     if self.rank == 0:
-
                         # Save the current model
 
-                        logging.info(f"Saving model, optimizer, grad scaler, and learning rate scheduler states to {save_loc}")
+                        logging.info(
+                            f"Saving model, optimizer, grad scaler, and learning rate scheduler states to {save_loc}")
 
                         state_dict = {
                             "epoch": epoch,
                             "model_state_dict": self.model.state_dict(),
                             "optimizer_state_dict": optimizer.state_dict(),
-                            'scheduler_state_dict': scheduler.state_dict() if conf["trainer"]["use_scheduler"] else None,
+                            'scheduler_state_dict': scheduler.state_dict() if conf["trainer"][
+                                "use_scheduler"] else None,
                             'scaler_state_dict': scaler.state_dict()
                         }
                         torch.save(state_dict, f"{save_loc}/checkpoint.pt")
 
                 else:
 
-                    logging.info(f"Saving FSDP model, optimizer, grad scaler, and learning rate scheduler states to {save_loc}")
+                    logging.info(
+                        f"Saving FSDP model, optimizer, grad scaler, and learning rate scheduler states to {save_loc}")
 
                     # Initialize the checkpoint I/O handler
 

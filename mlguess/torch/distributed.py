@@ -6,20 +6,18 @@ from torch.distributed.fsdp.fully_sharded_data_parallel import (
     MixedPrecision,
     CPUOffload
 )
-from torch.distributed.fsdp.wrap import (
-    transformer_auto_wrap_policy,
-    size_based_auto_wrap_policy,
-)
+from torch.distributed.fsdp.wrap import size_based_auto_wrap_policy
+
 from torch.distributed.algorithms._checkpoint.checkpoint_wrapper import (
    checkpoint_wrapper,
    CheckpointImpl,
    apply_activation_checkpointing,
 )
-from credit.models.checkpoint import (
+from mlguess.torch.checkpoint import (
     TorchFSDPModel
 )
 from torch.nn.parallel import DistributedDataParallel as DDP
-from credit.mixed_precision import parse_dtype
+from mlguess.torch.mixed_precision import parse_dtype
 import functools
 import logging
 

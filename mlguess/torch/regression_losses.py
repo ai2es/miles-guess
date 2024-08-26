@@ -14,6 +14,7 @@ class EvidentialRegressionLoss:
     Args:
         coef (float, optional): Coefficient for the regularization term. Defaults to 1.0.
     """
+
     def __init__(self, coef=1.0):
         self.coef = coef
 
@@ -35,10 +36,10 @@ class EvidentialRegressionLoss:
         """
         two_blambda = 2 * beta * (1 + v) + tol
         nll = 0.5 * torch.log(np.pi / (v + tol)) \
-            - alpha * torch.log(two_blambda + tol) \
-            + (alpha + 0.5) * torch.log(v * (y - gamma) ** 2 + two_blambda + tol) \
-            + torch.lgamma(alpha) \
-            - torch.lgamma(alpha + 0.5)
+              - alpha * torch.log(two_blambda + tol) \
+              + (alpha + 0.5) * torch.log(v * (y - gamma) ** 2 + two_blambda + tol) \
+              + torch.lgamma(alpha) \
+              - torch.lgamma(alpha + 0.5)
 
         return nll
 
@@ -97,9 +98,9 @@ def modified_mse(gamma, nu, alpha, beta, target, reduction='mean'):
     Reference: https://www.mit.edu/~amini/pubs/pdf/deep-evidential-regression.pdf
     Source: https://github.com/deargen/MT-ENet/tree/468822188f52e517b1ee8e386eea607b2b7d8829
     """
-    mse = (gamma-target)**2
+    mse = (gamma - target) ** 2
     c = get_mse_coef(gamma, nu, alpha, beta, target).detach()
-    mod_mse = mse*c
+    mod_mse = mse * c
 
     if reduction == 'mean':
         return mod_mse.mean()
@@ -131,7 +132,7 @@ def get_mse_coef(gamma, nu, alpha, beta, y):
     nu_eff = check_mse_efficiency_nu(gamma, nu, alpha, beta)
     delta = (gamma - y).abs()
     min_bound = torch.min(nu_eff, alpha_eff).min()
-    c = (min_bound.sqrt()/(delta + tol)).detach()
+    c = (min_bound.sqrt() / (delta + tol)).detach()
     return torch.clip(c, min=False, max=1.)
 
 
@@ -153,7 +154,7 @@ def check_mse_efficiency_alpha(nu, alpha, beta):
         where f => the NLL loss (BayesianDTI.loss.MarginalLikelihood)
 
     """
-    right = (torch.exp((torch.digamma(alpha+0.5)-torch.digamma(alpha))) - 1)*2*beta*(1+nu) / (nu + 1e-8)
+    right = (torch.exp((torch.digamma(alpha + 0.5) - torch.digamma(alpha))) - 1) * 2 * beta * (1 + nu) / (nu + 1e-8)
     return right.detach()
 
 
@@ -184,17 +185,19 @@ class EvidentialMarginalLikelihood(torch.nn.modules.loss._Loss):
     """Marginal likelihood error of prior network.
     The target value is not a distribution (mu, std), but a just value.
 
-    This is a negative log marginal likelihood, with integral mu and sigma.
-
-    Reference: https://www.mit.edu/~amini/pubs/pdf/deep-evidential-regression.pdf
+    Reference: Amini et al. 2020 (https://www.mit.edu/~amini/pubs/pdf/deep-evidential-regression.pdf)
     Source: https://github.com/deargen/MT-ENet/tree/468822188f52e517b1ee8e386eea607b2b7d8829
     """
+
     def __init__(self, size_average=None, reduce=None, reduction: str = 'mean'):
         super(EvidentialMarginalLikelihood, self).__init__(size_average, reduce, reduction)
 
     def forward(self, gamma: torch.Tensor, nu: torch.Tensor, alpha: torch.Tensor, beta: torch.Tensor,
                 target: torch.Tensor) -> torch.Tensor:
-        """Args:
+        """
+        Conduct the forward pass through the loss.
+
+        Args:
             gamma (torch.Tensor): gamma output value of the evidential network
             nu (torch.Tensor): nu output value of the evidential network
             alpha (torch.Tensor): alpha output value of the evidential network
@@ -203,16 +206,12 @@ class EvidentialMarginalLikelihood(torch.nn.modules.loss._Loss):
 
         Return:
             (Tensor) Negative log marginal likelihood of EvidentialNet
-                p(y|m) = Student-t(y; gamma, (beta(1+nu))/(nu*alpha) , 2*alpha)
-                then, the negative log likelihood is (CAUTION QUITE COMPLEX!)
-                NLL = -log(p(y|m)) =
-                    log(3.14/nu)*0.5 - alpha*log(2*beta*(1 + nu)) + (alpha + 0.5)*log( nu(target - gamma)^2 + 2*beta(1 + nu) )
-                    + log(GammaFunc(alpha)/GammaFunc(alpha + 0.5))
+
         """
         pi = torch.tensor(np.pi)
-        x1 = torch.log(pi/(nu + tol))*0.5
-        x2 = -alpha*torch.log(2.*beta*(1. + nu) + tol)
-        x3 = (alpha + 0.5)*torch.log(nu*(target - gamma)**2 + 2.*beta*(1. + nu) + tol)
+        x1 = torch.log(pi / (nu + tol)) * 0.5
+        x2 = -alpha * torch.log(2. * beta * (1. + nu) + tol)
+        x3 = (alpha + 0.5) * torch.log(nu * (target - gamma) ** 2 + 2. * beta * (1. + nu) + tol)
         x4 = torch.lgamma(alpha + tol) - torch.lgamma(alpha + 0.5 + tol)
         if self.reduction == 'mean':
             return (x1 + x2 + x3 + x4).mean()
@@ -229,24 +228,28 @@ class EvidenceRegularizer(torch.nn.modules.loss._Loss):
     Reference: https://www.mit.edu/~amini/pubs/pdf/deep-evidential-regression.pdf
     Source: https://github.com/deargen/MT-ENet/tree/468822188f52e517b1ee8e386eea607b2b7d8829
     """
+
     def __init__(self, size_average=None, reduce=None, reduction: str = 'mean', coef=0.1):
         super(EvidenceRegularizer, self).__init__(size_average, reduce, reduction)
         self.coef = coef
 
     def forward(self, gamma: torch.Tensor, nu: torch.Tensor, alpha: torch.Tensor,
                 target: torch.Tensor) -> torch.Tensor:
-        """Args:
+        """
+        Forward pass through the loss.
+
+        Args:
             gamma (torch.Tensor): gamma output value of the evidential network
             nu (torch.Tensor): nu output value of the evidential network
             alpha (torch.Tensor): alpha output value of the evidential network
             target (torch.Tensor): target value
 
-        Return:
+        Returns:
             (Tensor) prior network regularization
             Loss = |y - gamma|*(2*nu + alpha) * factor
 
         """
-        loss_value = torch.abs(target - gamma)*(2*nu + alpha) * self.coef
+        loss_value = torch.abs(target - gamma) * (2 * nu + alpha) * self.coef
         if self.reduction == 'mean':
             return loss_value.mean()
         elif self.reduction == 'sum':
@@ -264,6 +267,7 @@ class LipschitzMSELoss(torch.nn.Module):
         coef (float, optional): Coefficient for the regularization term. Defaults to 0.1.
         reduction (str, optional): Specifies the method to reduce the loss over the batch. Can be 'mean', 'sum', or 'none'. Defaults to 'mean'.
     """
+
     def __init__(self, tol=1e-8, coef=0.1, reduction='mean'):
         super(LipschitzMSELoss, self).__init__()
         self.tol = tol

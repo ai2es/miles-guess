@@ -97,7 +97,8 @@ class BaseRegressor(object):
         self.history = None
 
     def build_neural_network(self, inputs, outputs, last_layer="Dense"):
-        """Create Keras neural network model and compile it.
+        """
+        Create Keras neural network model and compile it.
 
         Args:
             inputs (int): Number of input predictor variables.
@@ -108,7 +109,6 @@ class BaseRegressor(object):
 
         if self.activation == "leaky":
             self.activation = LeakyReLU()
-
         if self.kernel_reg == "l1":
             self.kernel_reg = L1(self.l1_weight)
         elif self.kernel_reg == "l2":
@@ -522,7 +522,8 @@ class RegressorDNN(BaseRegressor):
 
 
 class GaussianRegressorDNN(BaseRegressor):
-    """A Dense Neural Network Model that can support arbitrary numbers of hidden layers
+    """
+    A Dense Neural Network Model that can support arbitrary numbers of hidden layers
     and provides evidential uncertainty estimation.
     Inherits from BaseRegressor.
 
@@ -542,6 +543,7 @@ class GaussianRegressorDNN(BaseRegressor):
         model: Keras Model object.
         evidential_coef: Evidential regularization coefficient.
         metrics: Optional list of metrics to monitor during training.
+
     """
 
     def __init__(
@@ -571,11 +573,13 @@ class GaussianRegressorDNN(BaseRegressor):
         metrics=None,
         eps=1e-7
     ):
-        """Initialize the EvidentialRegressorDNN.
+        """
+        Initialize the EvidentialRegressorDNN.
 
         Args:
             coupling_coef: Coupling coeffient for loss fix
             evidential_coef: Evidential regularization coefficient.
+
         """
         super().__init__(  # Call the constructor of the base class
             hidden_layers,
@@ -606,7 +610,8 @@ class GaussianRegressorDNN(BaseRegressor):
         self.loss = gaussian_nll
 
     def build_neural_network(self, inputs, outputs, last_layer="DenseNormal"):
-        """Create Keras neural network model and compile it.
+        """
+        Create Keras neural network model and compile it.
 
         Args:
             inputs (int): Number of input predictor variables.
@@ -702,7 +707,8 @@ class GaussianRegressorDNN(BaseRegressor):
 
 
 class EvidentialRegressorDNN(BaseRegressor):
-    """A Dense Neural Network Model that can support arbitrary numbers of hidden layers
+    """
+    A Dense Neural Network Model that can support arbitrary numbers of hidden layers
     and provides evidential uncertainty estimation.
     Inherits from BaseRegressor.
 
@@ -722,6 +728,7 @@ class EvidentialRegressorDNN(BaseRegressor):
         model: Keras Model object.
         evidential_coef: Evidential regularization coefficient.
         metrics: Optional list of metrics to monitor during training.
+
     """
     def __init__(
         self,
@@ -803,7 +810,8 @@ class EvidentialRegressorDNN(BaseRegressor):
         logging.info(f"Using loss: {loss}")
 
     def build_neural_network(self, inputs, outputs):
-        """Create Keras neural network model and compile it.
+        """
+        Create Keras neural network model and compile it.
 
         Args:
             inputs (int): Number of input predictor variables.
@@ -905,19 +913,17 @@ class EvidentialRegressorDNN(BaseRegressor):
 
         return mu, v, alpha, beta
 
-    def predict_ensemble(
-        self, x_test, scaler=None, batch_size=None
-    ):
+    def predict_ensemble(self, x_test, scaler=None, batch_size=None):
         return super().predict_ensemble(x_test, scaler=scaler, batch_size=batch_size, num_outputs=3)
 
-    def predict_monte_carlo(
-        self, x_test, forward_passes, scaler=None, batch_size=None
-    ):
-        return super().predict_monte_carlo(x_test, forward_passes, scaler=scaler, batch_size=batch_size, num_outputs=3)
+    def predict_monte_carlo(self, x_test, forward_passes, scaler=None, batch_size=None):
+        return super().predict_monte_carlo(x_test, forward_passes,
+                                           scaler=scaler, batch_size=batch_size, num_outputs=3)
 
 
 class CategoricalDNN(object):
-    """A Dense Neural Network Model that can support arbitrary numbers of hidden layers.
+    """
+    A Dense Neural Network Model that can support arbitrary numbers of hidden layers.
 
     Attributes:
         hidden_layers: Number of hidden layers
@@ -941,6 +947,7 @@ class CategoricalDNN(object):
         decay: Level of decay to apply to learning rate
         verbose: Level of detail to provide during training (0 = None, 1 = Minimal, 2 = All)
         classifier: (boolean) If training on classes
+
     """
     def __init__(
         self,
@@ -969,7 +976,7 @@ class CategoricalDNN(object):
         decay=0,
         verbose=0,
         random_state=1000,
-        callbacks=[],
+        callbacks=None,
         balanced_classes=0,
         steps_per_epoch=0,
     ):
@@ -997,6 +1004,8 @@ class CategoricalDNN(object):
         self.use_dropout = use_dropout
         self.dropout_alpha = dropout_alpha
         self.epochs = epochs
+        if callbacks is None:
+            self.callbacks = []
         self.callbacks = callbacks
         self.decay = decay
         self.verbose = verbose
@@ -1007,7 +1016,8 @@ class CategoricalDNN(object):
         self.steps_per_epoch = steps_per_epoch
 
     def build_neural_network(self, inputs, outputs):
-        """Create Keras neural network model and compile it.
+        """
+        Create Keras neural network model and compile it.
 
         Args:
             inputs (int): Number of input predictor variables
@@ -1066,13 +1076,15 @@ class CategoricalDNN(object):
         self.model.compile(optimizer=self.optimizer_obj, loss=self.loss)
 
     def build_from_sequential(self, model, optimizer="adam", loss="mse", metrics=None):
-        """Build the neural network model using a Keras Sequential model.
+        """
+        Build the neural network model using a Keras Sequential model.
 
         Args:
             model (tf.keras.Sequential): Keras Sequential model to use.
             optimizer (str or tf.keras.optimizers.Optimizer): Optimizer for the model.
             loss (str or tf.keras.losses.Loss): Loss function for the model.
             metrics (list of str or tf.keras.metrics.Metric): Metrics for the model.
+
         """
         self.model = model
 

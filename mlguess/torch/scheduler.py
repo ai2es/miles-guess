@@ -13,11 +13,11 @@ def load_scheduler(optimizer, conf):
     """Load a learning rate scheduler based on the configuration.
 
     Parameters:
-    - optimizer: The PyTorch optimizer.
-    - conf: The configuration dictionary.
+        optimizer: The PyTorch optimizer.
+        conf: The configuration dictionary.
 
     Returns:
-    - scheduler: The PyTorch learning rate scheduler.
+        scheduler: The PyTorch learning rate scheduler.
     """
     conf = copy.deepcopy(conf)
 
@@ -103,14 +103,18 @@ def lr_lambda_phase1(epoch, num_epochs=100, warmup_epochs=10):
 
 
 class CosineAnnealingWarmupRestarts(LRScheduler):
-    """optimizer (Optimizer): Wrapped optimizer.
-    first_cycle_steps (int): First cycle step size.
-    cycle_mult(float): Cycle steps magnification. Default: -1.
-    max_lr(float): First cycle's max learning rate. Default: 0.1.
-    min_lr(float): Min learning rate. Default: 0.001.
-    warmup_steps(int): Linear warmup step size. Default: 0.
-    gamma(float): Decrease rate of max learning rate by cycle. Default: 1.
-    last_epoch (int): The index of last epoch. Default: -1.
+    """
+    Cosine Annealing learning rate scheduler.
+
+    Attributes:
+        optimizer (Optimizer): Wrapped optimizer.
+        first_cycle_steps (int): First cycle step size.
+        cycle_mult(float): Cycle steps magnification. Default: -1.
+        max_lr(float): First cycle's max learning rate. Default: 0.1.
+        min_lr(float): Min learning rate. Default: 0.001.
+        warmup_steps(int): Linear warmup step size. Default: 0.
+        gamma(float): Decrease rate of max learning rate by cycle. Default: 1.
+        last_epoch (int): The index of last epoch. Default: -1.
     """
 
     def __init__(
@@ -190,14 +194,14 @@ class CosineAnnealingWarmupRestarts(LRScheduler):
 def annealed_probability(epoch, max_epochs=100, min_probability=0.01, max_probability=1.0):
     """Anneal the termination probability from 1 to a small value.
 
-    Parameters:
-    - epoch: The current epoch.
-    - max_epochs: The maximum number of epochs for annealing.
-    - min_probability: The minimum termination probability.
-    - max_probability: The maximum termination probability.
+    Args:
+        epoch: The current epoch.
+        max_epochs: The maximum number of epochs for annealing.
+        min_probability: The minimum termination probability.
+        max_probability: The maximum termination probability.
 
     Returns:
-    - termination_probability: The annealed termination probability.
+        termination_probability: The annealed termination probability.
     """
     # Linear annealing schedule
     termination_probability = 1.0 - (epoch / max_epochs) * (1.0 - min_probability)

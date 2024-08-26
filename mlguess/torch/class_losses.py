@@ -3,7 +3,6 @@ import torch
 
 # Adapted from https://github.com/dougbrion/pytorch-classification-uncertainty/blob/master/losses.py
 
-
 def get_device():
     """Get the device for PyTorch operations.
 
