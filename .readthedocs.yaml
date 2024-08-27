@@ -16,7 +16,7 @@ build:
     # golang: "1.19"
 
 conda:
-  environment: environment.yml
+  environment: environment_torch.yml
 # Build documentation in the "docs/" directory with Sphinx
 sphinx:
   configuration: docs/source/conf.py
