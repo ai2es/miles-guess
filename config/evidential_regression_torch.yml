@@ -1,0 +1,100 @@
+save_loc: "/glade/work/$USER/repos/miles-guess/miles-guess/testing/regression/"
+seed: 1000
+
+data:
+  dataset_path: /glade/work/schreck/repos/miles-guess/miles-guess/applications/torch_dataset/dataset.py
+  dataset_name: "CustomDataset"
+  input_cols: &input_cols
+   - 'wind_speed:10_m:m_s-1'
+   - 'potential_temperature_skin_change:10_m:K_m-1'
+   - 'bulk_richardson:10_m:None'
+   - 'mixing_ratio_skin_change:2_m:g_kg-1_m-1'
+  output_cols: &output_cols
+    - 'friction_velocity:surface:m_s-1'
+  split_params:
+    flat_seed: 42  # Example seed
+    data_seed: 0   # Example data split seed
+  split_ratios:
+    train_size: 0.9  # Train/Test split
+    valid_size: 0.885  # Train/Valid split within the training set
+  scaler_x:
+    params:
+      copy: true
+      with_mean: true
+      with_std: true
+    type: quantile
+  scaler_y:
+    params:
+      copy: true
+      with_mean: true
+      with_std: true
+    type: normalize
+  batch_size: &batch_size 5470 # Example batch size
+  data_path: '/glade/p/cisl/aiml/ai2es/surfacelayer/cabauw_derived_data_20210720.csv'
+
+trainer:
+    mode: fsdp # none, ddp, fsdp
+    training_metric: "valid_loss"
+    train_batch_size: *batch_size
+    valid_batch_size: *batch_size
+    batches_per_epoch: 500 # Set to 0 to use len(dataloader)
+    valid_batches_per_epoch: 0
+    learning_rate: 0.0061048983425573185
+    weight_decay: 3.5931998006241314e-07
+    start_epoch: 0
+    epochs: 1
+    amp: False
+    grad_accum_every: 1
+    grad_max_norm: 1.0
+    thread_workers: 4
+    valid_thread_workers: 4
+    stopping_patience: 5
+    skip_validation: False
+    load_weights: False
+    load_optimizer: False
+    use_scheduler: True
+    # scheduler: {'scheduler_type': 'cosine-annealing', first_cycle_steps: 500, cycle_mult: 6.0, max_lr: 5.0e-04, min_lr: 5.0e-07, warmup_steps: 499, gamma: 0.7}
+    scheduler: {scheduler_type: plateau, mode: min, factor: 0.1, patience: 2, cooldown: 2, min_lr: 1.0e-07, verbose: true, threshold: 1.0e-04}
+    # scheduler: {'scheduler_type': 'lambda'}
+  
+model:
+  input_size: *input_cols  # Reference to data:input_cols
+  output_size: *output_cols  # Reference to data:output_cols
+  layer_size: [1057, 1057, 1057, 1057, 1057]  # Example block sizes
+  dr: [0.263, 0.263, 0.263, 0.263, 0.263]  # Dropout rates
+  batch_norm: False  # Whether to use batch normalization
+  lng: True  # Use the evidential layer (True) or not (False)
+
+train_loss:
+  tol: 1e-8  # Tolerance parameter for loss calculations
+  coef: 5.806527626063491  # Factor for the evidence regularizer
+  reduction: "mean"  # Reduction method for the loss calculation
+
+valid_loss:
+  tol: 1e-8  # Tolerance parameter for loss calculations
+  coef: 5.806527626063491  # Factor for the evidence regularizer
+  reduction: "mean"  # Reduction method for the loss calculation
+
+# pbs: #derecho
+#     conda: "holodec"
+#     project: "NAML0001"
+#     job_name: "xformer"
+#     walltime: "24:00:00"
+#     nodes: 8
+#     ncpus: 64
+#     ngpus: 4
+#     mem: '480GB'
+#     queue: 'preempt'
+    
+pbs: # casper
+    conda: "/glade/work/schreck/miniconda3/envs/evidential"
+    job_name: 'latlon'
+    nodes: 1
+    ncpus: 8
+    ngpus: 1
+    mem: '128GB'
+    walltime: '12:00:00'
+    gpu_type: 'a100'
+    cpu_type: 'milan'
+    project: 'NAML0001'
+    queue: 'casper'

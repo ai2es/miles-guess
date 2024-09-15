@@ -19,8 +19,8 @@ from collections import defaultdict
 import logging
 
 class BaseRegressor(object):
-    """
-    A base class for regression models.
+    """A base class for regression models.
+
     Attributes:
         hidden_layers: Number of hidden layers
         hidden_neurons: Number of neurons in each hidden layer
@@ -109,7 +109,6 @@ class BaseRegressor(object):
 
         if self.activation == "leaky":
             self.activation = LeakyReLU()
-
         if self.kernel_reg == "l1":
             self.kernel_reg = L1(self.l1_weight)
         elif self.kernel_reg == "l2":
@@ -169,8 +168,7 @@ class BaseRegressor(object):
         )
 
     def build_from_sequential(self, model, optimizer="adam", loss="mse", metrics=None):
-        """
-        Build the neural network model using a Keras Sequential model.
+        """Build the neural network model using a Keras Sequential model.
 
         Args:
             model (tf.keras.Sequential): Keras Sequential model to use.
@@ -204,8 +202,8 @@ class BaseRegressor(object):
         shuffle=True,
         **kwargs,
     ):
-        """
-        Fit the regression model.
+        """Fit the regression model.
+
         Args:
             x: Input data
             y: Target data
@@ -217,7 +215,6 @@ class BaseRegressor(object):
             use_multiprocessing: If True, use ProcessPoolExecutor to load data, which is faster but can cause issues with certain GPU setups. If False, use a ThreadPoolExecutor.
             **kwargs: Additional arguments to be passed to the `fit` method
         """
-
         if self.model is None:
             raise ValueError("Model has not been built. Call build_neural_network first.")
         if self.verbose:
@@ -240,8 +237,7 @@ class BaseRegressor(object):
         )
 
     def save_model(self):
-        """
-        Save the trained model to a file.
+        """Save the trained model to a file.
         """
         if not os.path.exists(self.save_path):
             os.makedirs(self.save_path)
@@ -259,8 +255,7 @@ class BaseRegressor(object):
 
     @classmethod
     def load_model(cls, conf):
-        """
-        Load a trained model using args from a configuration
+        """Load a trained model using args from a configuration
         """
         # Check if weights file exists
         weights = os.path.join(conf["model"]["save_path"], "best.h5")
@@ -306,7 +301,7 @@ class BaseRegressor(object):
         return model_class
 
     def mae(self, y_true, y_pred):
-        """ Compute the MAE """
+        """Compute the MAE"""
         num_splits = y_pred.shape[-1]
         if num_splits == 4:
             mu, _, _, _ = ops.split(y_pred, num_splits, axis=-1)
@@ -317,7 +312,7 @@ class BaseRegressor(object):
         return keras.metrics.mean_absolute_error(y_true, mu)
 
     def mse(self, y_true, y_pred):
-        """ Compute the MSE """
+        """Compute the MSE"""
         num_splits = y_pred.shape[-1]
         if num_splits == 4:
             mu, _, _, _ = ops.split(y_pred, num_splits, axis=-1)
@@ -329,8 +324,7 @@ class BaseRegressor(object):
         return keras.metrics.mean_squared_error(y_true, mu)
 
     def predict(self, x, scaler=None, batch_size=None):
-        """
-        Predict target values for input data.
+        """Predict target values for input data.
 
         Args:
             x (numpy.ndarray): Input data.
@@ -350,8 +344,7 @@ class BaseRegressor(object):
         return y_out
 
     def predict_ensemble(self, x, batch_size=None, scaler=None, num_outputs=1):
-        """
-        Predicts outcomes using an ensemble of trained Keras models.
+        """Predicts outcomes using an ensemble of trained Keras models.
 
         Args:
             x (numpy.ndarray): Input data for predictions.
@@ -429,8 +422,7 @@ class BaseRegressor(object):
         return ensemble_mu, ensemble_ale, ensemble_epi
 
     def predict_monte_carlo(self, x_test, forward_passes, scaler=None, batch_size=None, num_outputs=1):
-        """
-        Perform Monte Carlo dropout predictions for the model.
+        """Perform Monte Carlo dropout predictions for the model.
 
         Args:
             x_test (numpy.ndarray): Input data for prediction.
@@ -442,7 +434,6 @@ class BaseRegressor(object):
         Returns:
             tuple: Tuple of arrays containing predicted target values and specified uncertainties.
         """
-
         n_samples = x_test.shape[0]
         pred_size = self.model.output_shape[-1]
         _batch_size = self.batch_size if batch_size is None else batch_size
@@ -552,6 +543,7 @@ class GaussianRegressorDNN(BaseRegressor):
         model: Keras Model object.
         evidential_coef: Evidential regularization coefficient.
         metrics: Optional list of metrics to monitor during training.
+
     """
 
     def __init__(
@@ -587,6 +579,7 @@ class GaussianRegressorDNN(BaseRegressor):
         Args:
             coupling_coef: Coupling coeffient for loss fix
             evidential_coef: Evidential regularization coefficient.
+
         """
         super().__init__(  # Call the constructor of the base class
             hidden_layers,
@@ -735,6 +728,7 @@ class EvidentialRegressorDNN(BaseRegressor):
         model: Keras Model object.
         evidential_coef: Evidential regularization coefficient.
         metrics: Optional list of metrics to monitor during training.
+
     """
     def __init__(
         self,
@@ -765,8 +759,7 @@ class EvidentialRegressorDNN(BaseRegressor):
         metrics=None,
         eps=1e-7
     ):
-        """
-        Initialize the EvidentialRegressorDNN.
+        """Initialize the EvidentialRegressorDNN.
 
         Args:
             coupling_coef: Coupling coeffient for loss fix
@@ -920,20 +913,18 @@ class EvidentialRegressorDNN(BaseRegressor):
 
         return mu, v, alpha, beta
 
-    def predict_ensemble(
-        self, x_test, scaler=None, batch_size=None
-    ):
+    def predict_ensemble(self, x_test, scaler=None, batch_size=None):
         return super().predict_ensemble(x_test, scaler=scaler, batch_size=batch_size, num_outputs=3)
 
-    def predict_monte_carlo(
-        self, x_test, forward_passes, scaler=None, batch_size=None
-    ):
-        return super().predict_monte_carlo(x_test, forward_passes, scaler=scaler, batch_size=batch_size, num_outputs=3)
+    def predict_monte_carlo(self, x_test, forward_passes, scaler=None, batch_size=None):
+        return super().predict_monte_carlo(x_test, forward_passes,
+                                           scaler=scaler, batch_size=batch_size, num_outputs=3)
 
 
 class CategoricalDNN(object):
     """
     A Dense Neural Network Model that can support arbitrary numbers of hidden layers.
+
     Attributes:
         hidden_layers: Number of hidden layers
         hidden_neurons: Number of neurons in each hidden layer
@@ -956,6 +947,7 @@ class CategoricalDNN(object):
         decay: Level of decay to apply to learning rate
         verbose: Level of detail to provide during training (0 = None, 1 = Minimal, 2 = All)
         classifier: (boolean) If training on classes
+
     """
     def __init__(
         self,
@@ -984,7 +976,7 @@ class CategoricalDNN(object):
         decay=0,
         verbose=0,
         random_state=1000,
-        callbacks=[],
+        callbacks=None,
         balanced_classes=0,
         steps_per_epoch=0,
     ):
@@ -1012,6 +1004,8 @@ class CategoricalDNN(object):
         self.use_dropout = use_dropout
         self.dropout_alpha = dropout_alpha
         self.epochs = epochs
+        if callbacks is None:
+            self.callbacks = []
         self.callbacks = callbacks
         self.decay = decay
         self.verbose = verbose
@@ -1024,6 +1018,7 @@ class CategoricalDNN(object):
     def build_neural_network(self, inputs, outputs):
         """
         Create Keras neural network model and compile it.
+
         Args:
             inputs (int): Number of input predictor variables
             outputs (int): Number of output predictor variables
@@ -1089,6 +1084,7 @@ class CategoricalDNN(object):
             optimizer (str or tf.keras.optimizers.Optimizer): Optimizer for the model.
             loss (str or tf.keras.losses.Loss): Loss function for the model.
             metrics (list of str or tf.keras.metrics.Metric): Metrics for the model.
+
         """
         self.model = model
 

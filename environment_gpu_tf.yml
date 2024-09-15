@@ -1,9 +1,10 @@
-name: guess
+name: guesstf
 channels:
   - conda-forge
+  - nvidia
 dependencies:
-  - python=3.10
-  - numpy<1.24
+  - python=3.11
+  - numpy<2
   - scipy
   - matplotlib
   - xarray
@@ -25,7 +26,7 @@ dependencies:
   - pyarrow
   - imbalanced-learn
   - pip:
-    - tensorflow
+    - tensorflow[and-cuda]
     - keras
     - echo-opt
     - hagelslag

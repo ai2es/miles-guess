@@ -13,8 +13,11 @@ import math
 import os
 import keras
 import numpy as np
+from hagelslag.evaluation.ProbabilityMetrics import DistributedROC
+from sklearn.metrics import precision_recall_fscore_support, roc_auc_score
 
 logger = logging.getLogger(__name__)
+
 
 def get_callbacks(config: Dict[str, str], path_extend=False) -> List[Callback]:
     callbacks = []
@@ -72,13 +75,17 @@ class LearningRateTracker(Callback):
         logs = logs or {}
         logs["lr"] = K.get_value(self.model.optimizer.lr)
 
-
+@keras.saving.register_keras_serializable()
 class ReportEpoch(keras.callbacks.Callback):
     def __init__(self, epoch_var):
         self.epoch_var = epoch_var
 
-    def on_epoch_begin(self, epoch, logs=None):
-        self.epoch_var.assign_add(1)
+    def on_epoch_end(self, epoch, logs={}):
+        self.epoch_var += 1
+
+    def get_config(self):
+
+        return {}
 
 
 class MetricsCallback(keras.callbacks.Callback):
@@ -94,10 +101,11 @@ class MetricsCallback(keras.callbacks.Callback):
         self.bin_uppers = bin_boundaries[1:]
 
     def on_epoch_end(self, epoch, logs={}):
-        pred_probs = np.asarray(self.model.predict(self.x))
         if self.use_uncertainty:
-            pred_probs, _, _, _ = calc_prob_uncertainty(pred_probs)
+            pred_probs, _, _, _ = self.model.predict(self.x, return_uncertainties=True)
             pred_probs = pred_probs.numpy()
+        else:
+            pred_probs = np.asarray(self.model.predict(self.x, return_uncertainties=False))
         logs[f"{self.name}_csi"] = self.mean_csi(pred_probs)
         true_labels = np.argmax(self.y, 1)
         pred_labels = np.argmax(pred_probs, 1)
@@ -187,4 +195,3 @@ class MetricsCallback(keras.callbacks.Callback):
                     pass
         mean = np.mean(ece) if np.isfinite(np.mean(ece)) else self.bin_lowers.shape[0]
         return mean
-

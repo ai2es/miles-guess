@@ -15,8 +15,8 @@ elif backend == "torch":
 
 
 class DirichletEvidentialLoss(keras.losses.Loss):
-    """
-    Loss function for an evidential categorical model.
+    """Loss function for an evidential categorical model.
+
     Args:
         callback (list): List of callbacks.
         name (str): reference name
@@ -76,8 +76,7 @@ class DirichletEvidentialLoss(keras.losses.Loss):
         return ops.mean(A + B + C)
 
 class EvidentialRegressionLoss(keras.losses.Loss):
-    """
-    Loss function for an evidential regression model. The total loss is the Negative Log Likelihood of the
+    """Loss function for an evidential regression model. The total loss is the Negative Log Likelihood of the
     Normal Inverse Gamma summed with the error and scaled by the evidential coefficient. The coefficient has a strong
     influence on the uncertainty predictions (less so for the predictions themselves) of the model and must be tuned
     for individual datasets.
@@ -120,8 +119,8 @@ class EvidentialRegressionLoss(keras.losses.Loss):
         return config
 
 def gaussian_nll(y, y_pred, reduce=True):
-    """
-    Loss function for a parametric Gaussian Loss.
+    """Loss function for a parametric Gaussian Loss.
+
     Args:
         y: Training data targets
         y_pred: Model predicitons
@@ -139,8 +138,7 @@ def gaussian_nll(y, y_pred, reduce=True):
 
 class EvidentialRegressionCoupledLoss(keras.losses.Loss):
     def __init__(self, r=1.0, coeff=1.0):
-        """
-        implementation of the loss from meinert and lavin that fixes issues with the original
+        """Implementation of the loss from meinert and lavin that fixes issues with the original
         evidential loss for regression. The loss couples the virtual evidence values with coefficient r.
         In this new loss, the regularizer is unnecessary.
         """

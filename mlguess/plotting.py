@@ -7,8 +7,7 @@ from cartopy import feature as cfeature
 
 
 def plot_confusion_matrix(y_true, y_pred, classes, model_name, normalize=False, title=None, cmap=plt.cm.Blues, filename=None):
-    """
-    Function to plot a confusion matrix. 
+    """Function to plot a confusion matrix.
     """
     if not title:
         if normalize:
@@ -42,11 +41,79 @@ def plot_confusion_matrix(y_true, y_pred, classes, model_name, normalize=False, 
                     color="white" if cm[i, j] > thresh else "black",
                    fontsize=10)
             
-    if filename:
-        path = f'/glade/u/home/jwillson/winter-ptype/images/{model_name}/'
-        plt.savefig(path + filename, dpi=300, bbox_inches="tight")
+    if filename is not None:
+        plt.savefig(filename, dpi=300, bbox_inches="tight")
         
     return ax
+
+def compute_cov(df, col="pred_conf", quan="uncertainty", ascending=False):
+    df = df.copy()
+    df = df.sort_values(col, ascending=ascending)
+    df["dummy"] = 1
+    df[f"cu_{quan}"] = df[quan].cumsum() / df["dummy"].cumsum()
+    df[f"cu_{col}"] = df[col].cumsum() / df["dummy"].cumsum()
+    df[f"{col}_cov"] = df["dummy"].cumsum() / len(df)
+    return df
+
+
+def coverage_figures(
+    test_data, output_cols, colors=None, title=None, save_location=None
+):
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 3.5), sharey="col")
+
+    test_data["accuracy"] = (
+        test_data["pred_label"] == test_data["true_label"]
+    ).values.astype(int)
+
+    _test_data_sorted = compute_cov(test_data, col="pred_conf", quan="accuracy")
+    ax1.plot(_test_data_sorted["pred_conf_cov"], _test_data_sorted["cu_accuracy"])
+
+    num_classes = test_data["true_label"].nunique()
+    for label in range(num_classes):
+        cond = test_data["true_label"] == label
+        _test_data_sorted = compute_cov(
+            test_data[cond], col="pred_conf", quan="accuracy"
+        )
+        ax2.plot(
+            _test_data_sorted["pred_conf_cov"],
+            _test_data_sorted["cu_accuracy"],
+            c=colors[label],
+        )
+
+    if "evidential" in test_data:
+        _test_data_sorted = compute_cov(
+            test_data, col="evidential", quan="accuracy", ascending=True
+        )
+        ax1.plot(
+            _test_data_sorted["evidential_cov"],
+            _test_data_sorted["cu_accuracy"],
+            ls="--",
+        )
+        for label in range(num_classes):
+            c = test_data["true_label"] == label
+            _test_data_sorted = compute_cov(
+                test_data[c], col="evidential", quan="accuracy", ascending=True
+            )
+            ax2.plot(
+                _test_data_sorted["evidential_cov"],
+                _test_data_sorted["cu_accuracy"],
+                c=colors[label],
+                ls="--",
+            )
+
+    if title is not None:
+        ax1.set_title(title)
+
+    ax1.set_ylabel("Cumulative accuracy")
+    ax1.set_xlabel("Coverage (sorted by confidence/uncertainty)")
+    ax2.set_xlabel("Coverage (sorted by confidence/uncertainty)")
+    ax1.legend(["Confidence", "Uncertainty"], loc="best")
+    ax2.legend(output_cols, loc="best")
+    plt.tight_layout()
+
+    if save_location:
+        plt.savefig(save_location, dpi=300, bbox_inches="tight")
 
 
 def conus_plot(df, 

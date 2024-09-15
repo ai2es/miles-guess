@@ -1,0 +1,212 @@
+
+# Where to save stuff
+save_loc: '/glade/work/schreck/repos/miles-guess/miles-guess/testing/classifier'
+
+# Random state
+seed: 1000
+
+# Paths and data
+asos_path: /glade/p/cisl/aiml/ai2es/winter_ptypes/precip_rap/ASOS_mixture/
+data_path: /glade/p/cisl/aiml/ai2es/winter_ptypes/ptype_qc/mPING_interpolated_QC2.parquet
+mping_path: /glade/p/cisl/aiml/ai2es/winter_ptypes/precip_rap/mPING_mixture/
+test_cutoff: '2020-07-01'
+qc: '3.0'
+
+# Case studies
+case_studies:
+  dec_ice_storm:
+    - '2016-12-15'
+    - '2016-12-16'
+    - '2016-12-17'
+    - '2016-12-18'
+    - '2016-12-19'
+    - '2016-12-20'
+  ne_noreaster:
+    - '2017-03-11'
+    - '2017-03-12'
+    - '2017-03-13'
+    - '2017-03-14'
+    - '2017-03-15'
+    - '2017-03-16'
+    - '2017-03-17'
+  new_york:
+    - '2022-02-03'
+    - '2022-02-04'
+  texas:
+    - '2021-02-10'
+    - '2021-02-11'
+    - '2021-02-12'
+    - '2021-02-13'
+    - '2021-02-14'
+    - '2021-02-15'
+    - '2021-02-16'
+    - '2021-02-17'
+    - '2021-02-18'
+    - '2021-02-19'
+
+# Data fields
+data:
+  dataset_path: /glade/work/schreck/repos/miles-guess/miles-guess/applications/torch_dataset/ptype.py
+  dataset_name: "CustomDataset"
+  TEMP_C:
+    - TEMP_C_0_m
+    - TEMP_C_250_m
+    - TEMP_C_500_m
+    - TEMP_C_750_m
+    - TEMP_C_1000_m
+    - TEMP_C_1250_m
+    - TEMP_C_1500_m
+    - TEMP_C_1750_m
+    - TEMP_C_2000_m
+    - TEMP_C_2250_m
+    - TEMP_C_2500_m
+    - TEMP_C_2750_m
+    - TEMP_C_3000_m
+    - TEMP_C_3250_m
+    - TEMP_C_3500_m
+    - TEMP_C_3750_m
+    - TEMP_C_4000_m
+    - TEMP_C_4250_m
+    - TEMP_C_4500_m
+    - TEMP_C_4750_m
+    - TEMP_C_5000_m
+  T_DEWPOINT_C:
+    - T_DEWPOINT_C_0_m
+    - T_DEWPOINT_C_250_m
+    - T_DEWPOINT_C_500_m
+    - T_DEWPOINT_C_750_m
+    - T_DEWPOINT_C_1000_m
+    - T_DEWPOINT_C_1250_m
+    - T_DEWPOINT_C_1500_m
+    - T_DEWPOINT_C_1750_m
+    - T_DEWPOINT_C_2000_m
+    - T_DEWPOINT_C_2250_m
+    - T_DEWPOINT_C_2500_m
+    - T_DEWPOINT_C_2750_m
+    - T_DEWPOINT_C_3000_m
+    - T_DEWPOINT_C_3250_m
+    - T_DEWPOINT_C_3500_m
+    - T_DEWPOINT_C_3750_m
+    - T_DEWPOINT_C_4000_m
+    - T_DEWPOINT_C_4250_m
+    - T_DEWPOINT_C_4500_m
+    - T_DEWPOINT_C_4750_m
+    - T_DEWPOINT_C_5000_m
+  UGRD_m/s:
+    - UGRD_m/s_0_m
+    - UGRD_m/s_250_m
+    - UGRD_m/s_500_m
+    - UGRD_m/s_750_m
+    - UGRD_m/s_1000_m
+    - UGRD_m/s_1250_m
+    - UGRD_m/s_1500_m
+    - UGRD_m/s_1750_m
+    - UGRD_m/s_2000_m
+    - UGRD_m/s_2250_m
+    - UGRD_m/s_2500_m
+    - UGRD_m/s_2750_m
+    - UGRD_m/s_3000_m
+    - UGRD_m/s_3250_m
+    - UGRD_m/s_3500_m
+    - UGRD_m/s_3750_m
+    - UGRD_m/s_4000_m
+    - UGRD_m/s_4250_m
+    - UGRD_m/s_4500_m
+    - UGRD_m/s_4750_m
+    - UGRD_m/s_5000_m
+  VGRD_m/s:
+    - VGRD_m/s_0_m
+    - VGRD_m/s_250_m
+    - VGRD_m/s_500_m
+    - VGRD_m/s_750_m
+    - VGRD_m/s_1000_m
+    - VGRD_m/s_1250_m
+    - VGRD_m/s_1500_m
+    - VGRD_m/s_1750_m
+    - VGRD_m/s_2000_m
+    - VGRD_m/s_2250_m
+    - VGRD_m/s_2500_m
+    - VGRD_m/s_2750_m
+    - VGRD_m/s_3000_m
+    - VGRD_m/s_3250_m
+    - VGRD_m/s_3500_m
+    - VGRD_m/s_3750_m
+    - VGRD_m/s_4000_m
+    - VGRD_m/s_4250_m
+    - VGRD_m/s_4500_m
+    - VGRD_m/s_4750_m
+    - VGRD_m/s_5000_m
+  ptypes:
+    - ra_percent
+    - sn_percent
+    - pl_percent
+    - fzra_percent
+  scale_groups:
+    - TEMP_C
+    - T_DEWPOINT_C
+    - UGRD_m/s
+    - VGRD_m/s
+  scaler_type: robust
+  train_size1: 0.9
+  train_size2: 0.0
+
+ensemble:
+  mc_steps: 100
+  n_splits: 10
+
+# Training configuration
+batch_size: &batch_size 9411
+trainer:
+  mode: none  # none, ddp, fsdp
+  training_metric: "valid_loss"
+  train_batch_size: *batch_size
+  valid_batch_size: *batch_size
+  kl_loss_coefficient: 10
+  uncertainty: True
+  batches_per_epoch: 0  # Set to 0 to use len(dataloader)
+  valid_batches_per_epoch: 0
+  learning_rate: 0.001
+  weight_decay: 0.0
+  start_epoch: 0
+  epochs: 100
+  amp: False
+  grad_accum_every: 1
+  grad_max_norm: 1.0
+  thread_workers: 4
+  valid_thread_workers: 4
+  stopping_patience: 5
+  skip_validation: False
+  load_weights: False
+  load_optimizer: False
+  use_scheduler: True
+  scheduler:
+    scheduler_type: plateau
+    mode: min
+    factor: 0.1
+    patience: 2
+    cooldown: 2
+    min_lr: 1.0e-07
+    verbose: true
+    threshold: 1.0e-04
+
+# Model configuration
+model:
+  input_size: 84
+  output_size: 4
+  layer_size: [212, 212, 212, 212]  # Example block sizes
+  dr: [0.1167, 0.1167, 0.1167, 0.1167]  # Dropout rates
+  batch_norm: False  # Whether to use batch normalization
+  softmax: False
+
+# Launch commapnds
+pbs:
+  account: NAML0001
+  env_setup: "source ~/.bashrc \n\nconda activate guess"
+  gpu_type: a100
+  mem: 128GB
+  name: ptype-torch
+  ncpus: 8
+  ngpus: 1
+  queue: casper
+  select: 1
+  walltime: 43200

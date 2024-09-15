@@ -10,12 +10,12 @@ import numpy as np
 import pandas as pd
 from sklearn.metrics import precision_recall_fscore_support
 
-from ptype.reliability import (
+from mlguess.reliability import (
     compute_calibration,
     reliability_diagram,
     reliability_diagrams,
 )
-from ptype.plotting import (
+from mlguess.plotting import (
     plot_confusion_matrix,
     coverage_figures,
 )

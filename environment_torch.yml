@@ -1,10 +1,10 @@
-name: guess
+name: guesstorch
 channels:
   - conda-forge
-  - nvidia
+  - pytorch
 dependencies:
   - python=3.11
-  - numpy=1.23.*
+  - numpy<2
   - scipy
   - matplotlib
   - xarray
@@ -22,13 +22,14 @@ dependencies:
   - seaborn
   - sphinx
   - numba
-  - imbalanced-learn
-  - pyarrow
   - properscoring
+  - pyarrow
+  - imbalanced-learn
+  - pytorch
   - pip:
-    - tensorflow[and-cuda]
+    - keras
     - echo-opt
     - hagelslag
     - bridgescaler
-    - -e git+https://github.com/ai2es/ptype-physical.git#egg=ptype
+    - safetensors
     - -e .

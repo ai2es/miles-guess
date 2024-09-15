@@ -1,0 +1,25 @@
+# Option for casper
+pbs:
+  account: your account
+  env_setup: "conda activate mlguess"
+  gpu_type: a100
+  cpu_type: milan
+  mem: 128GB
+  name: ptype
+  ncpus: 8
+  ngpus: 1
+  queue: casper
+  select: 1
+  walltime: 43200
+
+# Option for derecho
+pbs:
+    project: "your account"
+    conda: "conda activate mlguess"
+    job_name: "my-guess-job"
+    walltime: "12:00:00"
+    nodes: 8  # this example asks for 32 total GPUs
+    ncpus: 64  # take all CPUs on a node
+    ngpus: 4  # always 4 on derecho
+    mem: '480GB'  # take all memory on a node
+    queue: 'main'
