@@ -185,7 +185,7 @@ class CategoricalDNN(keras.models.Model):
     def fit(self, x=None, y=None, **kwargs):
 
         if self.evidential:
-            e = keras.Variable(1)
+            e = keras.Variable(1.0)
             report_epoch_callback = ReportEpoch(e)
             self.loss = evidential_cat_loss(evi_coef=self.annealing_coeff,
                                             epoch_callback=report_epoch_callback)
@@ -270,6 +270,7 @@ class CategoricalDNN(keras.models.Model):
         return {**base_config, **parameter_config}
 
 
+@keras.saving.register_keras_serializable()
 class RegressorDNN(keras.models.Model):
     """A Dense Neural Network Model that can support arbitrary numbers of hidden layers
     and the ability to provide evidential uncertainty estimation or uncertainty estimation through
